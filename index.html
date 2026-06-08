@@ -499,7 +499,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <!-- ═══════════════ p5.js ═══════════════ -->
 
   <!-- Account system (localStorage + HMAC, zero network) -->
-  <script src="js/seedstudio-account.js?v=8"></script>
+  <script src="js/seedstudio-account.js"></script>
 <script src="p5.min.js"
   onerror="this.onerror=null;this.src='https://unpkg.com/p5@1.9.4/lib/p5.min.js';">
 </script>
@@ -849,28 +849,10 @@ function init(){
     window.open('https://afdian.net/@Seed%20Studio','_blank');
     toast('💳 请在爱发电完成付款后，回到这里粘贴订单号激活');
   });
-  document.getElementById('btnVerifyOrder').addEventListener('click',async function(){
-    var orderId=document.getElementById('orderIdInput').value.trim();
-    if(!orderId){toast('请粘贴爱发电订单号');return;}
-    var acc=window.SeedStudioAccount;
-    if(!acc||!acc.isLoggedIn){toast('请先登录账号');return;}
-    toast('⏳ 验证中...');
-    // For now: store order ID and notify seller
-    // The License Key system handles Pro activation
-    var key=prompt(
-      '请在爱发电完成付款后，输入卖家发给你的 License Key 激活 Pro：\n\n'+
-      '（付款后在爱发电 APP 中查看订单号，联系卖家获取 Key）\n\n'+
-      '订单号已自动复制: '+orderId,''
-    );
-    if(key){
-      activateLicense(key).then(function(ok){
-        if(ok){
-          S.tier='pro';syncAll();draw();updateAccountUI();
-          document.getElementById('orderIdInput').value='';
-          hidePayModal();
-        }
-      });
-    }
+  // Payment modal: close button
+  document.getElementById('btnGoPay').addEventListener('click',function(){
+    window.open('https://afdian.net/@Seed%20Studio','_blank');
+    toast('💳 完成付款后，在登录弹窗输入订单号查询 License Key');
   });
 
   document.addEventListener('keydown',function(e){
