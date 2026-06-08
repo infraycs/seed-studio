@@ -1,172 +1,117 @@
 /**
- * SeedStudio Account v7 — CloudBase SMS login
- * No password, no email. Just phone + verification code.
+ * SeedStudio Account v8 — localStorage + HMAC, reliable & zero-network
+ *
+ * Truth: localStorage is per-user-browser. 1000 users = 1000 separate browsers.
+ * Your computer stores NOTHING. Infinitely scalable.
+ *
+ * Payment: 爱发电 auto-reply sends License Key → user activates → Pro unlocked
  */
 (function(global){
 'use strict';
 
-var ENV_ID = 'seedstudio-d6gcgy3nwa8b4e1ca';
-var app = null, db = null, auth = null;
+var SECRET='seedstudio_v8_'+Math.random().toString(36);
 
-var currentUser = null;
-var creditBalance = 0;
-var membershipTier = 'free';
-var referralCode = '';
-var phoneNumber = '';
+async function hmacSign(data){
+  var enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
 
-// ═══════════════ INIT ═══════════════
+var currentUser=null,creditBalance=0,membershipTier='free',referralCode='';
+
 async function init(callback){
-  if(typeof tcb==='undefined'){callback('SDK未加载',null);return;}
-  app=tcb.init({env:ENV_ID});
-  auth=app.auth({persistence:'local'});
-  db=app.database();
-
-  var state=await auth.getLoginState().catch(function(){return null;});
-  if(state&&state.user){
-    phoneNumber=state.user.phoneNumber||'';
-    currentUser=state.user;
-    await loadUserDB(callback);
-  } else {
-    callback(null,null);
-  }
-}
-
-async function loadUserDB(callback){
   try{
-    var res=await db.collection('users').where({uid:currentUser.uid}).get();
-    if(res.data&&res.data.length>0){
-      var u=res.data[0];
-      creditBalance=u.credits||0;
-      membershipTier=u.tier||'free';
-      referralCode=u.referralCode||'';
-    } else {
-      var rc='S'+Math.random().toString(36).substring(2,8).toUpperCase();
-      await db.collection('users').add({uid:currentUser.uid,phone:phoneNumber,credits:3,tier:'free',referralCode:rc,createdAt:new Date().toISOString()});
-      creditBalance=3; membershipTier='free'; referralCode=rc;
-    }
-    callback(null,{credits:creditBalance,tier:membershipTier});
-  }catch(e){callback(e.message,null);}
+    var raw=localStorage.getItem('ss_user');
+    if(!raw){callback(null,null);return;}
+    var p=raw.split('.');if(p.length!==2){callback(null,null);return;}
+    var v=await hmacSign(p[0])===p[1];
+    if(!v){localStorage.removeItem('ss_user');callback(null,null);return;}
+    currentUser=JSON.parse(p[0]);creditBalance=currentUser.cr||0;membershipTier=currentUser.ti||'free';referralCode=currentUser.rc||'';
+    callback(null,currentUser);
+  }catch(e){callback(null,null);}
 }
 
-// ═══════════════ SEND CODE ═══════════════
-function sendCode(phone, callback){
-  if(!auth){callback('系统初始化中，请稍后再试',null);return;}
-  var p=phone.trim().replace(/\s/g,'');
-  if(!/^1[3-9]\d{9}$/.test(p)){callback('请输入正确的手机号',null);return;}
-  phoneNumber=p;
-  auth.sendPhoneCode(p).then(function(){
-    callback(null,{sent:true});
-  }).catch(function(e){
-    callback('发送失败: '+(e.message||e.code||e),null);
-  });
-}
-
-// ═══════════════ LOGIN / REGISTER ═══════════════
-function loginWithCode(code, inviteCode, callback){
-  if(!auth){callback('系统初始化中，请稍后',null);return;}
-  if(!phoneNumber){callback('请先输入手机号',null);return;}
-  auth.signInWithPhoneCode(phoneNumber,code).then(function(state){
-    currentUser=state.user;
-    loadUserDB(function(err,data){
-      if(err){callback(err,null);return;}
-      if(inviteCode)processReferral(inviteCode,function(){});
-      callback(null,currentUser);
-    });
-  }).catch(function(e){
-    callback('登录失败: '+(e.message||e.code||e),null);
-  });
-}
-
-function logout(callback){
-  auth.signOut().then(function(){
-    currentUser=null; creditBalance=0; membershipTier='free'; referralCode=''; phoneNumber='';
-    callback(null);
-  }).catch(function(e){callback(e.message);});
-}
-
-// ═══════════════ CREDITS ═══════════════
-function refreshCredits(callback){loadUserDB(callback);}
-
-async function deductCredit(amount, reason, callback){
-  if(!currentUser){callback('请先登录',null);return;}
-  amount=amount||1;
-  if(membershipTier==='pro'||membershipTier==='lifetime'){callback(null,{deducted:0,remaining:creditBalance,unlimited:true});return;}
-  if(creditBalance<amount){callback('积分不足！',null);return;}
-  var nb=creditBalance-amount;
-  try{
-    var res=await db.collection('users').where({uid:currentUser.uid}).get();
-    if(res.data&&res.data.length>0) await db.collection('users').doc(res.data[0]._id).update({credits:nb});
-    creditBalance=nb; callback(null,{deducted:amount,remaining:creditBalance});
-  }catch(e){callback(e.message,null);}
-}
-
-// ═══════════════ REFERRAL ═══════════════
-async function processReferral(inviteCode, callback){
-  try{
-    var ref=await db.collection('users').where({referralCode:inviteCode}).get();
-    if(ref.data&&ref.data.length>0){
-      var inv=ref.data[0];
-      await db.collection('users').doc(inv._id).update({credits:(inv.credits||0)+2});
-      // +2 to current user
-      var me=await db.collection('users').where({uid:currentUser.uid}).get();
-      if(me.data&&me.data.length>0){var nb=creditBalance+2; await db.collection('users').doc(me.data[0]._id).update({credits:nb}); creditBalance=nb;}
-    }
-  }catch(e){}
-  if(callback)callback(null,null);
-}
-function getReferralLink(){return referralCode?'https://www.seedstudio.top/?ref='+referralCode:'';}
-
-// ═══════════════ PRO ═══════════════
-async function upgradeToPro(userPhone,tier){
-  try{
-    var res=await db.collection('users').where({phone:userPhone}).get();
-    if(res.data&&res.data.length>0){
-      await db.collection('users').doc(res.data[0]._id).update({tier:tier||'pro',credits:999,upgradedAt:new Date().toISOString()});
-      if(currentUser&&phoneNumber===userPhone){membershipTier=tier||'pro';creditBalance=999;if(typeof S!=='undefined')S.tier='pro';}
-      return true;
-    }
-  }catch(e){}
-  return false;
-}
-
-// ═══════════════ PASSWORD LOGIN ═══════════════
-var SALT_PW='seedstudio_cb_pw_2024';
-async function sha256(str){var d=new TextEncoder().encode(str);var h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+async function save(){if(!currentUser)return;currentUser.up=Date.now();var d=JSON.stringify(currentUser),s=await hmacSign(d);localStorage.setItem('ss_user',d+'.'+s);}
 
 async function register(email,password,inviteCode,callback){
-  try{
-    var exist=await db.collection('users').where({email:email}).get();
-    if(exist.data&&exist.data.length>0){callback('该账号已注册，请直接登录',null);return;}
-    var pwHash=await sha256(password+SALT_PW);
-    var rc='S'+Math.random().toString(36).substring(2,8).toUpperCase();
-    var doc={email:email,passwordHash:pwHash,credits:3,tier:'free',referralCode:rc,invitedBy:inviteCode||'',createdAt:new Date().toISOString()};
-    var addRes=await db.collection('users').add(doc);
-    currentUser={uid:'pw_'+addRes.id,_id:addRes.id,email:email};
-    creditBalance=3;membershipTier='free';referralCode=rc;
-    if(inviteCode)processReferral(inviteCode,function(){});
-    callback(null,currentUser);
-  }catch(e){callback('注册失败: '+(e.message||e.code||e),null);}
+  var u={id:'u'+Date.now().toString(36),em:email,ph:await hash(password+SECRET),cr:3,ti:'free',rc:'S'+Math.random().toString(36).substring(2,8).toUpperCase(),ib:inviteCode||'',ct:new Date().toISOString()};
+  currentUser=u;creditBalance=3;membershipTier='free';referralCode=u.rc;await save();
+  if(inviteCode)await processReferral(inviteCode);
+  callback(null,u);
 }
 
 async function login(email,password,callback){
-  try{
-    var pwHash=await sha256(password+SALT_PW);
-    var res=await db.collection('users').where({email:email}).get();
-    if(!res.data||res.data.length===0){callback('账号不存在，请先注册',null);return;}
-    var u=res.data[0];
-    if(u.passwordHash!==pwHash){callback('密码错误',null);return;}
-    currentUser={uid:'pw_'+u._id,_id:u._id,email:email};
-    creditBalance=u.credits||0;membershipTier=u.tier||'free';referralCode=u.referralCode||'';
-    callback(null,currentUser);
-  }catch(e){callback('登录失败: '+(e.message||e.code||e),null);}
+  var h=await hash(password+SECRET),raw=localStorage.getItem('ss_user');
+  if(!raw){callback('账号不存在',null);return;}var p=raw.split('.');
+  if((await hmacSign(p[0]))!==p[1]){callback('数据损坏',null);return;}
+  var u=JSON.parse(p[0]);if(u.ph!==h){callback('密码错误',null);return;}
+  currentUser=u;creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';callback(null,u);
 }
 
+function logout(callback){currentUser=null;creditBalance=0;membershipTier='free';referralCode='';callback(null);}
+
+function refreshCredits(callback){if(!currentUser){callback('Not logged in',null);return;}creditBalance=currentUser.cr||0;membershipTier=currentUser.ti||'free';callback(null,{credits:creditBalance,tier:membershipTier});}
+
+async function deductCredit(amount,reason,callback){
+  if(!currentUser){callback('请先登录',null);return;}amount=amount||1;
+  if(membershipTier==='pro'||membershipTier==='lifetime'){callback(null,{deducted:0,remaining:creditBalance,unlimited:true});return;}
+  if(creditBalance<amount){callback('积分不足！',null);return;}
+  currentUser.cr=(currentUser.cr||0)-amount;creditBalance=currentUser.cr;await save();
+  callback(null,{deducted:amount,remaining:creditBalance});
+}
+
+async function processReferral(inviteCode){
+  var raw=localStorage.getItem('ss_user');if(!raw)return;
+  var u=JSON.parse(raw.split('.')[0]);
+  if(u.rc===inviteCode){u.cr=(u.cr||0)+2;var s=await hmacSign(JSON.stringify(u));localStorage.setItem('ss_user',JSON.stringify(u)+'.'+s);}
+  if(currentUser){currentUser.cr=(currentUser.cr||0)+2;creditBalance=currentUser.cr;await save();}
+}
+
+function getReferralLink(){return referralCode?'https://www.seedstudio.top/?ref='+referralCode:'';}
+
+// ═══════════════ BACKUP / RESTORE ═══════════════
+function backupAccount(){
+  var d=localStorage.getItem('ss_user');if(!d)return null;
+  return btoa(d); // base64 encoded
+}
+function restoreAccount(b64,callback){
+  try{
+    var d=atob(b64),p=d.split('.');
+    if(p.length!==2){callback('无效的备份文件',null);return;}
+    hmacSign(p[0]).then(function(s){
+      if(s!==p[1]){callback('备份已损坏',null);return;}
+      localStorage.setItem('ss_user',d);init(callback);
+    });
+  }catch(e){callback('备份格式错误',null);}
+}
+
+// ═══════════════ LICENSE KEY ACTIVATION ═══════════════
+var VALID_HASHES=[
+  'b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a',
+  'c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e',
+  '91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0',
+  'd761cb5047032a550655b9b3bb4f533e7c3837d00847421c671d1eea71077fb34',
+  'ff44a9b3f827ec3251898763799632f40e303da346acb83386e1ecee3fea1be9',
+];
+
+async function activateLicenseKey(key,callback){
+  var k=key.trim().toUpperCase();
+  var h=await hash(k);
+  if(VALID_HASHES.includes(h)){
+    if(currentUser){currentUser.ti='pro';currentUser.cr=999;membershipTier='pro';creditBalance=999;await save();}
+    callback(null,{tier:'pro',credits:999});
+  } else {callback('无效的 License Key',null);}
+}
+
+// ═══════════════ HELPERS ═══════════════
+async function hash(str){var d=new TextEncoder().encode(str);var h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+
 global.SeedStudioAccount={
-  init:init, sendCode:sendCode, loginWithCode:loginWithCode, login:login, register:register, logout:logout,
-  refreshCredits:refreshCredits, deductCredit:deductCredit, getReferralLink:getReferralLink,
-  upgradeToPro:upgradeToPro, processReferral:processReferral,
-  get currentUser(){return currentUser;}, get creditBalance(){return creditBalance;},
-  get membershipTier(){return membershipTier;}, get referralCode(){return referralCode;},
-  get isLoggedIn(){return !!currentUser;}, get phoneNumber(){return phoneNumber;},
+  init:init,register:register,login:login,logout:logout,refreshCredits:refreshCredits,
+  deductCredit:deductCredit,getReferralLink:getReferralLink,
+  activateLicenseKey:activateLicenseKey,backupAccount:backupAccount,restoreAccount:restoreAccount,
+  get currentUser(){return currentUser;},get creditBalance(){return creditBalance;},
+  get membershipTier(){return membershipTier;},get referralCode(){return referralCode;},
+  get isLoggedIn(){return !!currentUser;},
 };
 })(window);
