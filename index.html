@@ -809,14 +809,18 @@ function init(){
     if(!orderId){toast('请粘贴爱发电订单号');return;}
     var acc=window.SeedStudioAccount;
     if(!acc||!acc.isLoggedIn){toast('请先登录账号');return;}
-    // Store order for manual verification
-    var user=acc.currentUser;
-    user.set('pendingOrder',orderId);
-    user.save().then(function(){
-      toast('✅ 订单已提交！我们核实后会自动升级您的账号');
-      document.getElementById('orderIdInput').value='';
-      hidePayModal();
-    }).catch(function(e){toast('提交失败: '+e.message);});
+    toast('⏳ 正在验证订单...');
+    Bmob.Cloud.run('verifyPayment',{userId:acc.currentUser.id,orderId:orderId}).then(function(r){
+      if(r.verified){
+        acc.membershipTier=r.tier||'pro';
+        S.tier='pro';syncAll();draw();updateAccountUI();
+        toast('🎉 支付验证成功！已升级为 '+r.tier+' 会员');
+        document.getElementById('orderIdInput').value='';
+        hidePayModal();
+      } else {
+        toast('❌ '+(r.error||'验证失败'));
+      }
+    }).catch(function(e){toast('验证失败: '+(e.message||e));});
   });
 
   document.addEventListener('keydown',function(e){
