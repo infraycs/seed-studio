@@ -9,7 +9,7 @@
 (function(global){
 'use strict';
 
-var SECRET='seedstudio_v8_'+Math.random().toString(36);
+var SECRET='seedstudio_v8_fixed_secret_2024_x9k3m';
 
 async function hmacSign(data){
   var enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
@@ -24,8 +24,8 @@ async function init(callback){
     var raw=localStorage.getItem('ss_user');
     if(!raw){callback(null,null);return;}
     var p=raw.split('.');if(p.length!==2){callback(null,null);return;}
-    var v=await hmacSign(p[0])===p[1];
-    if(!v){localStorage.removeItem('ss_user');callback(null,null);return;}
+    var v=(await hmacSign(p[0]))===p[1];
+    if(!v){localStorage.removeItem('ss_user');callback('系统更新，请重新注册',null);return;}
     currentUser=JSON.parse(p[0]);creditBalance=currentUser.cr||0;membershipTier=currentUser.ti||'free';referralCode=currentUser.rc||'';
     callback(null,currentUser);
   }catch(e){callback(null,null);}
@@ -43,7 +43,7 @@ async function register(email,password,inviteCode,callback){
 async function login(email,password,callback){
   var h=await hash(password+SECRET),raw=localStorage.getItem('ss_user');
   if(!raw){callback('账号不存在',null);return;}var p=raw.split('.');
-  if((await hmacSign(p[0]))!==p[1]){callback('数据损坏',null);return;}
+  if((await hmacSign(p[0]))!==p[1]){localStorage.removeItem('ss_user');callback('系统已更新，请重新注册',null);return;}
   var u=JSON.parse(p[0]);if(u.ph!==h){callback('密码错误',null);return;}
   currentUser=u;creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';callback(null,u);
 }
