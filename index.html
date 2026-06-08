@@ -938,8 +938,10 @@ function init(){
   // Send SMS code
   document.getElementById('btnSendCode').addEventListener('click',function(){
     if(countdown>0)return;
+    this.textContent='...'; this.style.color='#888';
+    if(typeof tcb==='undefined'){showErr('sms','CloudBase SDK 未加载，请刷新');this.textContent='发送验证码';this.style.color='';return;}
     var acc=window.SeedStudioAccount;
-    if(!acc){showErr('sms','系统加载中');return;}
+    if(!acc){showErr('sms','系统加载中');this.textContent='发送验证码';this.style.color='';return;}
     acc.sendCode(document.getElementById('smsPhone').value,function(err){
       if(err){showErr('sms',err);return;}
       countdown=60; var btn=document.getElementById('btnSendCode');
