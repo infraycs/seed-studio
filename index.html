@@ -495,11 +495,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
 <!-- ═══════════════ p5.js ═══════════════ -->
 
-  <!-- Bmob SDK (account system, bmob.cn, ¥0/month) -->
-  <script src="https://cdn.bmob.cn/bmob-3.0.0.min.js"
-    onerror="this.onerror=null;this.src='https://libs.bmob.cn/bmob-3.0.0.min.js';this.onerror=function(){document.getElementById('creditDisplay').textContent='⚠️ 账户服务不可用';console.error('Bmob SDK failed to load');};">
-  </script>
-  <script src="js/seedstudio-account.js"></script>
+  <!-- Account system (REST API, zero CDN) -->
+  <script src="js/seedstudio-account.js?v=3"></script>
 <script src="p5.min.js"
   onerror="this.onerror=null;this.src='https://unpkg.com/p5@1.9.4/lib/p5.min.js';">
 </script>
@@ -855,7 +852,12 @@ function init(){
     var acc=window.SeedStudioAccount;
     if(!acc||!acc.isLoggedIn){toast('请先登录账号');return;}
     toast('⏳ 正在验证订单...');
-    Bmob.Cloud.run('verifyPayment',{userId:acc.currentUser.id,orderId:orderId}).then(function(r){
+    fetch('https://api.bmob.cn/1/functions/verifyPayment',{
+      method:'POST',
+      headers:{'X-Bmob-Application-Id':'7e66f9f90a2cb2c3447c5241b59c0673','X-Bmob-REST-API-Key':'b936e837095771edc3798f296164d7d3','Content-Type':'application/json'},
+      body:JSON.stringify({userId:acc.currentUser.objectId,orderId:orderId})
+    }).then(function(r){return r.json();}).then(function(r){
+      r=r.result||r;
       if(r.verified){
         acc.membershipTier=r.tier||'pro';
         S.tier='pro';syncAll();draw();updateAccountUI();
