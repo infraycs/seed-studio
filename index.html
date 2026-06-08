@@ -438,26 +438,25 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <div class="modal-overlay" id="loginModal">
   <div class="modal login-modal">
     <div class="tab-row">
-      <button class="active" data-tab="login">🔐 登录</button>
-      <button data-tab="register">✨ 注册</button>
+      <button class="active" data-tab="sms">📱 短信登录</button>
+      <button data-tab="password">🔑 密码登录</button>
     </div>
-    <!-- Login form -->
-    <form id="loginForm" onsubmit="return false">
-      <div class="field"><label>邮箱</label><input type="email" id="loginEmail" placeholder="your@email.com" required></div>
-      <div class="field"><label>密码</label><input type="password" id="loginPassword" placeholder="••••••••" required></div>
-      <div class="field" id="loginError" style="display:none"></div>
-      <button type="button" class="submit-btn" id="btnLogin">登录</button>
-    </form>
-    <!-- Register form -->
-    <form id="registerForm" onsubmit="return false" style="display:none">
-      <div class="field"><label>邮箱</label><input type="email" id="regEmail" placeholder="your@email.com" required></div>
-      <div class="field"><label>密码</label><input type="password" id="regPassword" placeholder="••••••••" required></div>
-      <div class="field"><label>邀请码 <span style="color:var(--muted);font-weight:400;">(选填)</span></label><input type="text" id="regInvite" placeholder="好友的邀请码"></div>
-      <div class="field"><div class="hint">🎁 注册即得 3 免费积分 | 👥 邀请好友双方各 +2</div></div>
-      <div class="field" id="regError" style="display:none"></div>
-      <button type="button" class="submit-btn" id="btnRegister">注册</button>
-    </form>
-    <div class="switch-text" id="switchText">还没有账号？<span style="color:var(--accent2);">立即注册 →</span></div>
+    <!-- SMS login -->
+    <div id="smsForm">
+      <div class="field"><label>手机号</label><input type="tel" id="smsPhone" placeholder="138****1234" maxlength="11"></div>
+      <div class="field"><label>验证码</label><div style="display:flex;gap:8px;"><input type="text" id="smsCode" placeholder="6位验证码" maxlength="6" style="flex:1;"><button type="button" id="btnSendCode" style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent2);cursor:pointer;font-size:0.75rem;white-space:nowrap;font-family:var(--font);">发送验证码</button></div></div>
+      <div class="field"><div class="hint">🎁 新用户自动注册 · 得 3 免费积分</div></div>
+      <div class="field" id="smsError" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnSmsLogin">登录 / 注册</button>
+    </div>
+    <!-- Password login -->
+    <div id="pwdForm" style="display:none">
+      <div class="field"><label>手机号 / 邮箱</label><input type="text" id="pwdAccount" placeholder="手机号或邮箱"></div>
+      <div class="field"><label>密码</label><input type="password" id="pwdPassword" placeholder="••••••••"></div>
+      <div class="field"><div class="hint">🔑 首次输入自动注册</div></div>
+      <div class="field" id="pwdError" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnPwdLogin">登录 / 注册</button>
+    </div>
   </div>
 </div>
 
@@ -919,61 +918,83 @@ function init(){
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
 
   // Tab switching
-  var loginTab='login';
   document.querySelectorAll('#loginModal .tab-row button').forEach(function(btn){
     btn.addEventListener('click',function(){
-      loginTab=btn.dataset.tab;
       document.querySelectorAll('#loginModal .tab-row button').forEach(function(b){b.classList.toggle('active',b===btn);});
-      document.getElementById('loginForm').style.display=loginTab==='login'?'block':'none';
-      document.getElementById('registerForm').style.display=loginTab==='register'?'block':'none';
-      document.getElementById('switchText').innerHTML=loginTab==='login'?'还没有账号？<span style=\"color:var(--accent2);\">立即注册 →</span>':'已有账号？<span style=\"color:var(--accent2);\">去登录 →</span>';
-      document.getElementById('loginError').style.display='none';
-      document.getElementById('regError').style.display='none';
+      document.getElementById('smsForm').style.display=btn.dataset.tab==='sms'?'block':'none';
+      document.getElementById('pwdForm').style.display=btn.dataset.tab==='password'?'block':'none';
+      document.getElementById('smsError').style.display='none';
+      document.getElementById('pwdError').style.display='none';
     });
-  });
-  document.getElementById('switchText').addEventListener('click',function(){
-    var newTab=loginTab==='login'?'register':'login';
-    document.querySelector('#loginModal .tab-row button[data-tab=\"'+newTab+'\"]').click();
   });
   document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
-  // Login submit
-  document.getElementById('btnLogin').addEventListener('click',function(){
-    var email=document.getElementById('loginEmail').value.trim();
-    var password=document.getElementById('loginPassword').value;
-    if(!email||!password){showLoginError('请填写邮箱和密码');return;}
+  var countdown=0;
+  // Send SMS code
+  document.getElementById('btnSendCode').addEventListener('click',function(){
+    if(countdown>0)return;
     var acc=window.SeedStudioAccount;
-    if(!acc){showLoginError('系统加载中，请刷新重试');return;}
-    acc.login(email,password,function(err,user){
-      if(err){showLoginError(err);return;}
-      hideLoginModal();updateAccountUI();
-      toast('✅ 登录成功！积分: '+acc.creditBalance);
+    if(!acc){showErr('sms','系统加载中');return;}
+    acc.sendCode(document.getElementById('smsPhone').value,function(err){
+      if(err){showErr('sms',err);return;}
+      countdown=60; var btn=document.getElementById('btnSendCode');
+      var iv=setInterval(function(){
+        countdown--; btn.textContent=countdown+'s';
+        if(countdown<=0){clearInterval(iv);btn.textContent='发送验证码';}
+      },1000);
     });
   });
 
-  // Register submit
-  document.getElementById('btnRegister').addEventListener('click',function(){
-    var email=document.getElementById('regEmail').value.trim();
-    var password=document.getElementById('regPassword').value;
-    var invite=document.getElementById('regInvite').value.trim();
-    if(!email||!password){showRegError('请填写邮箱和密码');return;}
-    if(password.length<6){showRegError('密码至少6位');return;}
+  // SMS login
+  document.getElementById('btnSmsLogin').addEventListener('click',function(){
+    var code=document.getElementById('smsCode').value.trim();
+    if(!code||code.length<4){showErr('sms','请输入验证码');return;}
     var acc=window.SeedStudioAccount;
-    if(!acc){showRegError('系统加载中，请刷新重试');return;}
-    var btn=document.getElementById('btnRegister');
-    btn.textContent='注册中...';btn.disabled=true;
-    acc.register(email,password,invite,function(err,user){
-      btn.textContent='注册';btn.disabled=false;
-      if(err){showRegError(err);return;}
+    if(!acc){showErr('sms','系统加载中');return;}
+    var btn=document.getElementById('btnSmsLogin');btn.textContent='登录中...';btn.disabled=true;
+    var invite=localStorage.getItem('seedstudio_invite')||'';
+    acc.loginWithCode(code,invite,function(err,user){
+      btn.textContent='登录 / 注册';btn.disabled=false;
+      if(err){showErr('sms',err);return;}
+      localStorage.removeItem('seedstudio_invite');
       hideLoginModal();updateAccountUI();
-      toast('🎉 注册成功！获得 3 免费积分');
+      toast('✅ '+(user?'注册成功！🎁 3积分已到账':'登录成功！积分: '+acc.creditBalance));
     });
   });
 
-  function showLoginError(msg){var el=document.getElementById('loginError');el.textContent=msg;el.style.display='block';el.className='field error';}
-  function showRegError(msg){var el=document.getElementById('regError');el.textContent=msg;el.style.display='block';el.className='field error';}
+  // Password login
+  document.getElementById('btnPwdLogin').addEventListener('click',function(){
+    var account=document.getElementById('pwdAccount').value.trim();
+    var password=document.getElementById('pwdPassword').value;
+    if(!account||!password){showErr('pwd','请填写账号和密码');return;}
+    if(password.length<6){showErr('pwd','密码至少6位');return;}
+    var acc=window.SeedStudioAccount;
+    if(!acc){showErr('pwd','系统加载中');return;}
+    var btn=document.getElementById('btnPwdLogin');btn.textContent='登录中...';btn.disabled=true;
+    var isEmail=account.indexOf('@')>-1;
+    var invite=localStorage.getItem('seedstudio_invite')||'';
+    // Try login first, if fail try register
+    acc.login(account,password,function(err,user){
+      if(err&&err.indexOf('不存在')>-1){
+        // Auto register
+        acc.register(account,password,invite,function(e2,u2){
+          btn.textContent='登录 / 注册';btn.disabled=false;
+          if(e2){showErr('pwd',e2);return;}
+          localStorage.removeItem('seedstudio_invite');
+          hideLoginModal();updateAccountUI();
+          toast('🎉 注册成功！获得 3 免费积分');
+        });
+      } else {
+        btn.textContent='登录 / 注册';btn.disabled=false;
+        if(err){showErr('pwd',err);return;}
+        hideLoginModal();updateAccountUI();
+        toast('✅ 登录成功！积分: '+acc.creditBalance);
+      }
+    });
+  });
 
-  // Show login modal on button click
+  function showErr(type,msg){var el=document.getElementById(type+'Error');el.textContent=msg;el.style.display='block';el.className='field error';}
+
   document.getElementById('btnAccount').addEventListener('click',function(){
     var acc=window.SeedStudioAccount;
     if(acc&&acc.isLoggedIn){acc.logout(function(){updateAccountUI();syncAll();draw();});toast('已退出登录');}

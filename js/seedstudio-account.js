@@ -1,190 +1,170 @@
 /**
- * SeedStudio Account System v5
- * Tencent CloudBase (cloudbase.net) — auth, credits, referral
- * Cost: ¥0/month (free tier: 50K API/day, 2GB DB)
+ * SeedStudio Account v7 — CloudBase SMS login
+ * No password, no email. Just phone + verification code.
  */
 (function(global){
 'use strict';
 
 var ENV_ID = 'seedstudio-d6gcgy3nwa8b4e1ca';
-var app = null;
-var db = null;
-var auth = null;
+var app = null, db = null, auth = null;
 
 var currentUser = null;
 var creditBalance = 0;
 var membershipTier = 'free';
 var referralCode = '';
+var phoneNumber = '';
 
 // ═══════════════ INIT ═══════════════
-function init(callback){
-  if(typeof tcb==='undefined'){
-    callback('CloudBase SDK 未加载，请刷新',null);
-    return;
-  }
+async function init(callback){
+  if(typeof tcb==='undefined'){callback('SDK未加载',null);return;}
   app=tcb.init({env:ENV_ID});
   auth=app.auth({persistence:'local'});
   db=app.database();
 
-  // Check existing login
-  auth.getLoginState().then(function(state){
-    if(state){
-      currentUser=state.user;
-      loadUserData(callback);
-    } else {
-      // Anonymous sign-in for initial state
-      callback(null,null);
-    }
-  }).catch(function(){
+  var state=await auth.getLoginState().catch(function(){return null;});
+  if(state&&state.user){
+    phoneNumber=state.user.phoneNumber||'';
+    currentUser=state.user;
+    await loadUserDB(callback);
+  } else {
     callback(null,null);
-  });
+  }
 }
 
-function loadUserData(callback){
-  if(!currentUser){callback('Not logged in',null);return;}
-  db.collection('users').where({uid:currentUser.uid}).get().then(function(res){
+async function loadUserDB(callback){
+  try{
+    var res=await db.collection('users').where({uid:currentUser.uid}).get();
     if(res.data&&res.data.length>0){
       var u=res.data[0];
       creditBalance=u.credits||0;
       membershipTier=u.tier||'free';
       referralCode=u.referralCode||'';
-      callback(null,{credits:creditBalance,tier:membershipTier});
     } else {
-      // First login — create user doc
-      var newUser={
-        uid:currentUser.uid,
-        email:currentUser.email||'',
-        credits:3,
-        tier:'free',
-        referralCode:'S'+Math.random().toString(36).substring(2,8).toUpperCase(),
-        createdAt:new Date().toISOString(),
-      };
-      db.collection('users').add(newUser).then(function(){
-        creditBalance=3;
-        membershipTier='free';
-        referralCode=newUser.referralCode;
-        callback(null,{credits:3,tier:'free'});
-      });
+      var rc='S'+Math.random().toString(36).substring(2,8).toUpperCase();
+      await db.collection('users').add({uid:currentUser.uid,phone:phoneNumber,credits:3,tier:'free',referralCode:rc,createdAt:new Date().toISOString()});
+      creditBalance=3; membershipTier='free'; referralCode=rc;
     }
-  }).catch(function(e){callback(e.message,null);});
+    callback(null,{credits:creditBalance,tier:membershipTier});
+  }catch(e){callback(e.message,null);}
 }
 
-// ═══════════════ AUTH ═══════════════
-function register(email, password, inviteCode, callback){
-  auth.signUpWithEmailAndPassword(email,password).then(function(){
-    return auth.signInWithEmailAndPassword(email,password);
-  }).then(function(state){
+// ═══════════════ SEND CODE ═══════════════
+function sendCode(phone, callback){
+  var p=phone.trim().replace(/\s/g,'');
+  if(!/^1[3-9]\d{9}$/.test(p)){callback('请输入正确的手机号',null);return;}
+  phoneNumber=p;
+  auth.sendPhoneCode(p).then(function(){
+    callback(null,{sent:true});
+  }).catch(function(e){
+    callback('发送失败: '+(e.message||e.code||e),null);
+  });
+}
+
+// ═══════════════ LOGIN / REGISTER ═══════════════
+function loginWithCode(code, inviteCode, callback){
+  if(!phoneNumber){callback('请先输入手机号',null);return;}
+  auth.signInWithPhoneCode(phoneNumber,code).then(function(state){
     currentUser=state.user;
-    loadUserData(function(err,data){
+    loadUserDB(function(err,data){
       if(err){callback(err,null);return;}
       if(inviteCode)processReferral(inviteCode,function(){});
       callback(null,currentUser);
     });
   }).catch(function(e){
-    // If user exists, try login
-    if(e.code==='USER_ALREADY_EXISTS'||e.message.indexOf('exists')>-1){
-      login(email,password,callback);
-    } else {
-      callback('注册失败: '+(e.message||e.code),null);
-    }
-  });
-}
-
-function login(email, password, callback){
-  auth.signInWithEmailAndPassword(email,password).then(function(state){
-    currentUser=state.user;
-    loadUserData(function(err,data){
-      if(err)callback(err,null);
-      else callback(null,currentUser);
-    });
-  }).catch(function(e){
-    callback('登录失败: '+(e.message||e.code),null);
+    callback('登录失败: '+(e.message||e.code||e),null);
   });
 }
 
 function logout(callback){
   auth.signOut().then(function(){
-    currentUser=null;
-    creditBalance=0;
-    membershipTier='free';
-    referralCode='';
+    currentUser=null; creditBalance=0; membershipTier='free'; referralCode=''; phoneNumber='';
     callback(null);
   }).catch(function(e){callback(e.message);});
 }
 
 // ═══════════════ CREDITS ═══════════════
-function refreshCredits(callback){
-  loadUserData(callback);
-}
+function refreshCredits(callback){loadUserDB(callback);}
 
-function deductCredit(amount, reason, callback){
+async function deductCredit(amount, reason, callback){
   if(!currentUser){callback('请先登录',null);return;}
   amount=amount||1;
-  if(membershipTier==='pro'||membershipTier==='lifetime'){
-    callback(null,{deducted:0,remaining:creditBalance,unlimited:true});
-    return;
-  }
-  if(creditBalance<amount){callback('积分不足！请充值或邀请好友获取积分',null);return;}
-
+  if(membershipTier==='pro'||membershipTier==='lifetime'){callback(null,{deducted:0,remaining:creditBalance,unlimited:true});return;}
+  if(creditBalance<amount){callback('积分不足！',null);return;}
   var nb=creditBalance-amount;
-  db.collection('users').where({uid:currentUser.uid}).update({credits:nb}).then(function(){
-    creditBalance=nb;
-    callback(null,{deducted:amount,remaining:creditBalance});
-  }).catch(function(e){
-    callback('扣款失败: '+(e.message||e.code),null);
-  });
+  try{
+    var res=await db.collection('users').where({uid:currentUser.uid}).get();
+    if(res.data&&res.data.length>0) await db.collection('users').doc(res.data[0]._id).update({credits:nb});
+    creditBalance=nb; callback(null,{deducted:amount,remaining:creditBalance});
+  }catch(e){callback(e.message,null);}
 }
 
 // ═══════════════ REFERRAL ═══════════════
-function processReferral(inviteCode, callback){
-  db.collection('users').where({referralCode:inviteCode}).get().then(function(res){
-    if(res.data&&res.data.length>0){
-      var inviter=res.data[0];
-      // +2 to inviter
-      db.collection('users').doc(inviter._id).update({credits:(inviter.credits||0)+2});
+async function processReferral(inviteCode, callback){
+  try{
+    var ref=await db.collection('users').where({referralCode:inviteCode}).get();
+    if(ref.data&&ref.data.length>0){
+      var inv=ref.data[0];
+      await db.collection('users').doc(inv._id).update({credits:(inv.credits||0)+2});
       // +2 to current user
-      var nb=(creditBalance||0)+2;
-      db.collection('users').where({uid:currentUser.uid}).update({credits:nb}).then(function(){
-        creditBalance=nb;
-      });
-      callback(null,{message:'🎁 双方各得 +2 积分'});
-    } else {
-      callback(null,{message:'邀请码已记录'});
+      var me=await db.collection('users').where({uid:currentUser.uid}).get();
+      if(me.data&&me.data.length>0){var nb=creditBalance+2; await db.collection('users').doc(me.data[0]._id).update({credits:nb}); creditBalance=nb;}
     }
-  }).catch(function(e){callback(e.message,null);});
+  }catch(e){}
+  if(callback)callback(null,null);
+}
+function getReferralLink(){return referralCode?'https://www.seedstudio.top/?ref='+referralCode:'';}
+
+// ═══════════════ PRO ═══════════════
+async function upgradeToPro(userPhone,tier){
+  try{
+    var res=await db.collection('users').where({phone:userPhone}).get();
+    if(res.data&&res.data.length>0){
+      await db.collection('users').doc(res.data[0]._id).update({tier:tier||'pro',credits:999,upgradedAt:new Date().toISOString()});
+      if(currentUser&&phoneNumber===userPhone){membershipTier=tier||'pro';creditBalance=999;if(typeof S!=='undefined')S.tier='pro';}
+      return true;
+    }
+  }catch(e){}
+  return false;
 }
 
-function getReferralLink(){
-  if(!referralCode)return'';
-  return'https://www.seedstudio.top/?ref='+referralCode;
+// ═══════════════ PASSWORD LOGIN ═══════════════
+var SALT_PW='seedstudio_cb_pw_2024';
+async function sha256(str){var d=new TextEncoder().encode(str);var h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+
+async function register(email,password,inviteCode,callback){
+  try{
+    var exist=await db.collection('users').where({email:email}).get();
+    if(exist.data&&exist.data.length>0){callback('该账号已注册，请直接登录',null);return;}
+    var pwHash=await sha256(password+SALT_PW);
+    var rc='S'+Math.random().toString(36).substring(2,8).toUpperCase();
+    var doc={email:email,passwordHash:pwHash,credits:3,tier:'free',referralCode:rc,invitedBy:inviteCode||'',createdAt:new Date().toISOString()};
+    var addRes=await db.collection('users').add(doc);
+    currentUser={uid:'pw_'+addRes.id,_id:addRes.id,email:email};
+    creditBalance=3;membershipTier='free';referralCode=rc;
+    if(inviteCode)processReferral(inviteCode,function(){});
+    callback(null,currentUser);
+  }catch(e){callback('注册失败: '+(e.message||e.code||e),null);}
 }
 
-// ═══════════════ PRO UPGRADE ═══════════════
-function upgradeToPro(tier,orderId){
-  if(!currentUser)return;
-  tier=tier||'pro';
-  db.collection('users').where({uid:currentUser.uid}).update({
-    tier:tier,
-    credits:999,
-    orderId:orderId||'',
-    upgradedAt:new Date().toISOString(),
-  }).then(function(){
-    membershipTier=tier;
-    creditBalance=999;
-    if(typeof S!=='undefined')S.tier='pro';
-  });
+async function login(email,password,callback){
+  try{
+    var pwHash=await sha256(password+SALT_PW);
+    var res=await db.collection('users').where({email:email}).get();
+    if(!res.data||res.data.length===0){callback('账号不存在，请先注册',null);return;}
+    var u=res.data[0];
+    if(u.passwordHash!==pwHash){callback('密码错误',null);return;}
+    currentUser={uid:'pw_'+u._id,_id:u._id,email:email};
+    creditBalance=u.credits||0;membershipTier=u.tier||'free';referralCode=u.referralCode||'';
+    callback(null,currentUser);
+  }catch(e){callback('登录失败: '+(e.message||e.code||e),null);}
 }
 
-// ═══════════════ EXPORT ═══════════════
 global.SeedStudioAccount={
-  init:init, register:register, login:login, logout:logout,
-  refreshCredits:refreshCredits, deductCredit:deductCredit,
-  getReferralLink:getReferralLink, upgradeToPro:upgradeToPro,
-  get currentUser(){return currentUser;},
-  get creditBalance(){return creditBalance;},
-  get membershipTier(){return membershipTier;},
-  get referralCode(){return referralCode;},
-  get isLoggedIn(){return !!currentUser;},
+  init:init, sendCode:sendCode, loginWithCode:loginWithCode, login:login, register:register, logout:logout,
+  refreshCredits:refreshCredits, deductCredit:deductCredit, getReferralLink:getReferralLink,
+  upgradeToPro:upgradeToPro, processReferral:processReferral,
+  get currentUser(){return currentUser;}, get creditBalance(){return creditBalance;},
+  get membershipTier(){return membershipTier;}, get referralCode(){return referralCode;},
+  get isLoggedIn(){return !!currentUser;}, get phoneNumber(){return phoneNumber;},
 };
-
 })(window);
