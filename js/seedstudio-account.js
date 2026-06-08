@@ -86,21 +86,30 @@ function restoreAccount(b64,callback){
 }
 
 // ═══════════════ LICENSE KEY ACTIVATION ═══════════════
-var VALID_HASHES=[
-  'b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a',
-  'c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e',
-  '91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0',
-  'd761cb5047032a550655b9b3bb4f533e7c3837d00847421c671d1eea71077fb34',
-  'ff44a9b3f827ec3251898763799632f40e303da346acb83386e1ecee3fea1be9',
-];
+var validKeysCache=null;
+
+async function loadValidKeys(){
+  if(validKeysCache)return validKeysCache;
+  try{
+    var r=await fetch('js/valid-keys.json?v='+Date.now());
+    validKeysCache=await r.json();
+    return validKeysCache;
+  }catch(e){return{keys:{}};}
+}
 
 async function activateLicenseKey(key,callback){
   var k=key.trim().toUpperCase();
   var h=await hash(k);
-  if(VALID_HASHES.includes(h)){
+  var vk=await loadValidKeys();
+  // Check against all stored hashes
+  var found=false;
+  for(var orderId in vk.keys){
+    if(vk.keys[orderId].hash===h){found=true;break;}
+  }
+  if(found){
     if(currentUser){currentUser.ti='pro';currentUser.cr=999;membershipTier='pro';creditBalance=999;await save();}
     callback(null,{tier:'pro',credits:999});
-  } else {callback('无效的 License Key',null);}
+  }else{callback('无效的 License Key',null);}
 }
 
 // ═══════════════ HELPERS ═══════════════
