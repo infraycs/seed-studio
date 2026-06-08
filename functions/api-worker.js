@@ -1,188 +1,164 @@
-/**
- * Seed Studio API — Cloudflare Worker
- * Endpoint: odd-sky-4c45.402741165.workers.dev
- */
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname;
-    const headers = {
+    const p = url.pathname;
+    const h = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Content-Type': 'application/json',
     };
-    if (request.method === 'OPTIONS') return new Response(null, { headers });
+    if (request.method === 'OPTIONS') return new Response(null, { headers: h });
 
     try {
-      if (path === '/register' && request.method === 'POST') return await handleRegister(request, env, headers);
-      if (path === '/login' && request.method === 'POST') return await handleLogin(request, env, headers);
-      if (path === '/me' && request.method === 'GET') return await handleMe(request, env, headers);
-      if (path === '/deduct' && request.method === 'POST') return await handleDeduct(request, env, headers);
-      if (path === '/upgrade' && request.method === 'POST') return await handleUpgrade(request, env, headers);
-      if (path === '/verify-payment' && request.method === 'POST') return await handleVerifyPayment(request, env, headers);
-      if (path === '/export' && request.method === 'POST') return await handleExport(request, env, headers);
+      // Test endpoint
+      if (p === '/test') return json({ env: !!env, db: !!env.DB, keys: env.DB ? 'OK' : 'MISSING' }, h);
 
-      return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers });
+      const body = request.method !== 'GET' ? await request.json().catch(() => ({})) : {};
+
+      if (p === '/register' && request.method === 'POST') return await reg(env, body, h);
+      if (p === '/login' && request.method === 'POST') return await login(env, body, h);
+      if (p === '/me' && request.method === 'GET') return await me(request, env, h);
+      if (p === '/deduct' && request.method === 'POST') return await deduct(request, env, body, h);
+      if (p === '/upgrade' && request.method === 'POST') return await upgrade(env, body, h);
+      if (p === '/order' && request.method === 'POST') return await order(env, body, h);
+
+      return json({ error: 'Not found' }, h, 404);
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+      return json({ error: e.message, stack: e.stack }, h, 500);
     }
   },
 };
 
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+function json(data, headers, status) {
+  return new Response(JSON.stringify(data), { status: status || 200, headers });
 }
 
-function generateToken() {
-  return 'st_' + crypto.randomUUID();
+async function sha256(text) {
+  const d = new TextEncoder().encode(text);
+  const h = await crypto.subtle.digest('SHA-256', d);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+function uid() { return 'st_' + crypto.randomUUID(); }
+function rcode() { return 'S' + Math.random().toString(36).substring(2, 8).toUpperCase(); }
 
 async function getUser(env, token) {
-  const data = await env.DB.get('user_' + token, 'json');
-  return data;
+  if (!env.DB) return null;
+  try { return await env.DB.get('u_' + token, 'json'); } catch (e) { return null; }
 }
 
-async function getUserByToken(request, env) {
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.replace('Bearer ', '');
-  if (!token) return null;
-  return await getUser(env, token);
-}
+// ── REGISTER ──
+async function reg(env, body, h) {
+  const { email, password, inviteCode } = body;
+  if (!email || !password) return json({ error: 'missing email/password' }, h, 400);
+  if (password.length < 6) return json({ error: 'password too short' }, h, 400);
 
-// ═══════════════ REGISTER ═══════════════
-async function handleRegister(request, env, headers) {
-  const { email, password, inviteCode } = await request.json();
-  if (!email || !password) return new Response(JSON.stringify({ error: '邮箱和密码必填' }), { status: 400, headers });
-  if (password.length < 6) return new Response(JSON.stringify({ error: '密码至少6位' }), { status: 400, headers });
+  const et = await env.DB.get('e_' + email);
+  if (et) return json({ error: 'email exists' }, h, 409);
 
-  const existing = await env.DB.get('email_' + email);
-  if (existing) return new Response(JSON.stringify({ error: '该邮箱已注册' }), { status: 409, headers });
-
-  const token = generateToken();
-  const referralCode = 'S' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const token = uid();
   const user = {
-    email, referralCode,
-    passwordHash: await sha256(password + 'seedstudio_salt'),
-    credits: 3, tier: 'free',
-    invitedBy: inviteCode || '',
-    createdAt: new Date().toISOString(),
+    email, ph: await sha256(password + '_salt_'),
+    cr: 3, ti: 'free', rc: rcode(),
+    ib: inviteCode || '', ct: new Date().toISOString(),
   };
 
-  await env.DB.put('user_' + token, JSON.stringify(user));
-  await env.DB.put('email_' + email, token);
-
-  // Referral bonus
+  // Referral
   if (inviteCode) {
-    // Find inviter by scanning all users (limited in KV, but OK for small scale)
-    const list = await env.DB.list({ prefix: 'user_' });
-    for (const key of list.keys) {
-      const u = await env.DB.get(key.name, 'json');
-      if (u && u.referralCode === inviteCode) {
-        u.credits = (u.credits || 0) + 2;
-        await env.DB.put(key.name, JSON.stringify(u));
-        user.credits += 2;
-        await env.DB.put('user_' + token, JSON.stringify(user));
+    const list = await env.DB.list({ prefix: 'u_' });
+    for (const k of list.keys) {
+      const u = await env.DB.get(k.name, 'json');
+      if (u && u.rc === inviteCode) {
+        u.cr = (u.cr || 0) + 2;
+        await env.DB.put(k.name, JSON.stringify(u));
+        user.cr += 2;
         break;
       }
     }
   }
 
-  return new Response(JSON.stringify({ token, credits: user.credits, tier: user.tier, referralCode }), { status: 201, headers });
+  await env.DB.put('u_' + token, JSON.stringify(user));
+  await env.DB.put('e_' + email, token);
+
+  return json({ ok: true, token, cr: user.cr, ti: user.ti, rc: user.rc }, h, 201);
 }
 
-// ═══════════════ LOGIN ═══════════════
-async function handleLogin(request, env, headers) {
-  const { email, password } = await request.json();
-  if (!email || !password) return new Response(JSON.stringify({ error: '邮箱和密码必填' }), { status: 400, headers });
+// ── LOGIN ──
+async function login(env, body, h) {
+  const { email, password } = body;
+  if (!email || !password) return json({ error: 'missing email/password' }, h, 400);
 
-  const token = await env.DB.get('email_' + email);
-  if (!token) return new Response(JSON.stringify({ error: '账号不存在' }), { status: 404, headers });
+  const token = await env.DB.get('e_' + email);
+  if (!token) return json({ error: 'user not found' }, h, 404);
 
-  const user = await getUser(env, token);
-  if (!user) return new Response(JSON.stringify({ error: '账号不存在' }), { status: 404, headers });
+  const user = await env.DB.get('u_' + token, 'json');
+  if (!user) return json({ error: 'user not found' }, h, 404);
 
-  const pwHash = await sha256(password + 'seedstudio_salt');
-  if (user.passwordHash !== pwHash) return new Response(JSON.stringify({ error: '密码错误' }), { status: 401, headers });
-
-  return new Response(JSON.stringify({ token, credits: user.credits, tier: user.tier, referralCode: user.referralCode }), { headers });
-}
-
-// ═══════════════ ME ═══════════════
-async function handleMe(request, env, headers) {
-  const user = await getUserByToken(request, env);
-  if (!user) return new Response(JSON.stringify({ error: '未登录' }), { status: 401, headers });
-  return new Response(JSON.stringify({ email: user.email, credits: user.credits, tier: user.tier, referralCode: user.referralCode }), { headers });
-}
-
-// ═══════════════ DEDUCT ═══════════════
-async function handleDeduct(request, env, headers) {
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.replace('Bearer ', '');
-  if (!token) return new Response(JSON.stringify({ error: '未登录' }), { status: 401, headers });
-
-  const user = await getUser(env, token);
-  if (!user) return new Response(JSON.stringify({ error: '未登录' }), { status: 401, headers });
-
-  const { amount } = await request.json();
-  const deduct = amount || 1;
-
-  if (user.tier === 'pro' || user.tier === 'lifetime') {
-    return new Response(JSON.stringify({ deducted: 0, remaining: user.credits, unlimited: true }), { headers });
-  }
-  if ((user.credits || 0) < deduct) {
-    return new Response(JSON.stringify({ error: '积分不足' }), { status: 402, headers });
+  if (user.ph !== await sha256(password + '_salt_')) {
+    return json({ error: 'wrong password' }, h, 401);
   }
 
-  user.credits -= deduct;
-  await env.DB.put('user_' + token, JSON.stringify(user));
-  return new Response(JSON.stringify({ deducted: deduct, remaining: user.credits }), { headers });
+  return json({ ok: true, token, cr: user.cr, ti: user.ti, rc: user.rc }, h);
 }
 
-// ═══════════════ EXPORT (deduct + log) ═══════════════
-async function handleExport(request, env, headers) {
-  return await handleDeduct(request, env, headers);
-}
-
-// ═══════════════ UPGRADE (admin) ═══════════════
-async function handleUpgrade(request, env, headers) {
-  const { email, tier } = await request.json();
-  if (!email) return new Response(JSON.stringify({ error: 'Missing email' }), { status: 400, headers });
-
-  const token = await env.DB.get('email_' + email);
-  if (!token) return new Response(JSON.stringify({ error: '用户不存在' }), { status: 404, headers });
-
+// ── ME ──
+async function me(request, env, h) {
+  const token = (request.headers.get('Authorization') || '').replace('Bearer ', '');
+  if (!token) return json({ error: 'not logged in' }, h, 401);
   const user = await getUser(env, token);
-  if (!user) return new Response(JSON.stringify({ error: '用户不存在' }), { status: 404, headers });
-
-  user.tier = tier || 'pro';
-  user.credits = 999;
-  user.upgradedAt = new Date().toISOString();
-  await env.DB.put('user_' + token, JSON.stringify(user));
-
-  return new Response(JSON.stringify({ success: true, email, tier: user.tier }), { headers });
+  if (!user) return json({ error: 'not logged in' }, h, 401);
+  return json({ email: user.email, cr: user.cr, ti: user.ti, rc: user.rc }, h);
 }
 
-// ═══════════════ VERIFY PAYMENT ═══════════════
-async function handleVerifyPayment(request, env, headers) {
-  const { orderId } = await request.json();
-  if (!orderId) return new Response(JSON.stringify({ error: 'Missing orderId' }), { status: 400, headers });
+// ── DEDUCT ──
+async function deduct(request, env, body, h) {
+  const token = (request.headers.get('Authorization') || '').replace('Bearer ', '');
+  if (!token) return json({ error: 'not logged in' }, h, 401);
+  const user = await getUser(env, token);
+  if (!user) return json({ error: 'not logged in' }, h, 401);
 
-  // Check if already processed
-  const existing = await env.DB.get('order_' + orderId);
-  if (existing) {
-    return new Response(JSON.stringify({ verified: true, key: existing }), { headers });
+  if (user.ti === 'pro' || user.ti === 'lifetime') {
+    return json({ ok: true, rm: user.cr, ul: true }, h);
   }
+  const amt = body.amount || 1;
+  if ((user.cr || 0) < amt) return json({ error: 'insufficient credits', cr: user.cr, need: amt }, h, 402);
 
-  // Generate license key
-  const key = 'SEED-PRO-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-  const keyHash = await sha256(key);
+  user.cr -= amt;
+  await env.DB.put('u_' + token, JSON.stringify(user));
+  return json({ ok: true, rm: user.cr }, h);
+}
 
-  // Store
-  await env.DB.put('order_' + orderId, key);
-  await env.DB.put('key_' + keyHash, JSON.stringify({ orderId, key, createdAt: new Date().toISOString() }));
+// ── ORDER (verify payment + generate key) ──
+async function order(env, body, h) {
+  const { orderId } = body;
+  if (!orderId) return json({ error: 'missing orderId' }, h, 400);
 
-  return new Response(JSON.stringify({ verified: true, key, orderId }), { headers });
+  let key = await env.DB.get('o_' + orderId);
+  if (!key) {
+    key = 'SEED-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    await env.DB.put('o_' + orderId, key);
+    // Also store reverse lookup
+    const kh = await sha256(key);
+    await env.DB.put('k_' + kh, JSON.stringify({ orderId, key }));
+  }
+  return json({ ok: true, key }, h);
+}
+
+// ── UPGRADE ──
+async function upgrade(env, body, h) {
+  const { email, tier } = body;
+  if (!email) return json({ error: 'missing email' }, h, 400);
+
+  const token = await env.DB.get('e_' + email);
+  if (!token) return json({ error: 'user not found' }, h, 404);
+
+  const user = await env.DB.get('u_' + token, 'json');
+  if (!user) return json({ error: 'user not found' }, h, 404);
+
+  user.ti = tier || 'pro';
+  user.cr = 999;
+  user.ua = new Date().toISOString();
+  await env.DB.put('u_' + token, JSON.stringify(user));
+
+  return json({ ok: true, email, ti: user.ti }, h);
 }
