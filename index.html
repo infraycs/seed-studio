@@ -447,825 +447,350 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
 
 <script>
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  SEEDED RNG                                                 ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ═══════════════ PRNG ═══════════════
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  PALETTES — Curated for beauty                              ║
-// ╚══════════════════════════════════════════════════════════════╝
-const PALETTES = {
-  aurora:  ['#0b1021','#1a237e','#4527a0','#00838f','#00e5ff','#84ffff'],
-  ember:   ['#1a0a00','#5d1a0a','#b83b00','#ff6b35','#ffb347','#ffe0b2'],
-  forest:  ['#0d1a0d','#1a3d1a','#2d6b2d','#4a9e4a','#80c880','#c8e8c8'],
-  sakura:  ['#1a0a14','#5c1a3a','#b84c6c','#f0a0b8','#ffd0dd','#fff0f4'],
-  ocean:   ['#021024','#052954','#0a4c8a','#1a8ec4','#5cb8e4','#c8e8f8'],
-  neon:    ['#0a0020','#1a0060','#6200ea','#d500f9','#00e5ff','#76ff03'],
-  mono:    ['#0a0a0a','#1a1a1a','#404040','#808080','#c0c0c0','#f0f0f0'],
+// ═══════════════ PALETTES ═══════════════
+const PALETTES={
+  aurora:['#0b1021','#1a237e','#4527a0','#00838f','#00e5ff','#84ffff'],
+  ember:['#1a0a00','#5d1a0a','#b83b00','#ff6b35','#ffb347','#ffe0b2'],
+  forest:['#0d1a0d','#1a3d1a','#2d6b2d','#4a9e4a','#80c880','#c8e8c8'],
+  sakura:['#1a0a14','#5c1a3a','#b84c6c','#f0a0b8','#ffd0dd','#fff0f4'],
+  ocean:['#021024','#052954','#0a4c8a','#1a8ec4','#5cb8e4','#c8e8f8'],
+  neon:['#0a0020','#1a0060','#6200ea','#d500f9','#00e5ff','#76ff03'],
+  mono:['#0a0a0a','#1a1a1a','#404040','#808080','#c0c0c0','#f0f0f0'],
   terracotta:['#1a0c08','#4a1c12','#8b3a22','#c56a3a','#e89860','#fddcc8'],
 };
-const PAL_KEYS = Object.keys(PALETTES);
+const PAL_KEYS=Object.keys(PALETTES);
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  STATE                                                      ║
-// ╚══════════════════════════════════════════════════════════════╝
-const S = {
-  seed: Math.floor(Math.random()*1e9),
-  layout: 'vortex', palette: 'neon', shape: 'circles',
-  density: 40, scale: 1.0, rotation: 0, noise: 0.3,
-  W: 960, H: 540,
-  tier: 'free', // 'free' | 'pro' — monetization
-  history: [],
+// ═══════════════ STATE ═══════════════
+const S={
+  seed:Math.floor(Math.random()*1e9), layout:'vortex', palette:'neon', shape:'circles',
+  density:40, scale:1.0, rotation:0, noise:0.3, W:960, H:540,
+  tier:'free', history:[],
 };
+function snap(){ return(({seed,layout,palette,shape,density,scale,rotation,noise,W,H})=>({seed,layout,palette,shape,density,scale,rotation,noise,W,H}))(S); }
 
-function snap() { return (({seed,layout,palette,shape,density,scale,rotation,noise,W,H})=>({seed,layout,palette,shape,density,scale,rotation,noise,W,H}))(S); }
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  DRAWING UTILS                                              ║
-// ╚══════════════════════════════════════════════════════════════╝
-
-// Draw a rich gradient background — essential for visual depth
-function drawBackground(p, pal){
-  const bg = p.drawingContext;
-  const grad = bg.createRadialGradient(S.W*0.35, S.H*0.35, S.H*0.05, S.W*0.65, S.H*0.65, S.H*0.75);
-  grad.addColorStop(0, pal[Math.min(2, pal.length-1)]);
-  grad.addColorStop(0.5, pal[0]);
-  grad.addColorStop(1, '#000000');
-  bg.fillStyle = grad;
-  bg.fillRect(0, 0, S.W, S.H);
-
-  // Subtle secondary light source
-  const g2 = bg.createRadialGradient(S.W*0.8, S.H*0.2, 0, S.W*0.8, S.H*0.2, S.H*0.5);
-  g2.addColorStop(0, pal[Math.min(4, pal.length-1)]+'18');
-  g2.addColorStop(1, 'transparent');
-  bg.fillStyle = g2;
-  bg.fillRect(0, 0, S.W, S.H);
+// ═══════════════ DRAWING UTILS ═══════════════
+function drawBackground(p,pal){
+  const ctx=p.drawingContext;
+  const grad=ctx.createRadialGradient(S.W*0.35,S.H*0.35,S.H*0.05,S.W*0.65,S.H*0.65,S.H*0.75);
+  grad.addColorStop(0,pal[Math.min(2,pal.length-1)]); grad.addColorStop(0.5,pal[0]); grad.addColorStop(1,'#000000');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,S.W,S.H);
+  const g2=ctx.createRadialGradient(S.W*0.8,S.H*0.2,0,S.W*0.8,S.H*0.2,S.H*0.5);
+  g2.addColorStop(0,pal[Math.min(4,pal.length-1)]+'18'); g2.addColorStop(1,'transparent');
+  ctx.fillStyle=g2; ctx.fillRect(0,0,S.W,S.H);
 }
 
-// Add subtle grain texture overlay (sampled for performance)
-function drawGrain(p, rng, amount=0.03){
-  p.loadPixels();
-  const d = p.pixelDensity();
-  const totalPixels = 4 * S.W * S.H * d * d;
-  // Only modify ~8% of pixels for performance
-  const step = Math.max(1, Math.floor(1 / 0.08));
-  for (let i = 0; i < totalPixels; i += 4 * step){
-    const noise = (rng() - 0.5) * amount * 255;
-    p.pixels[i] += noise;
-    p.pixels[i+1] += noise;
-    p.pixels[i+2] += noise;
-  }
+function drawGrain(p,rng,amount){
+  amount=amount||0.03; p.loadPixels();
+  const d=p.pixelDensity(),total=4*S.W*S.H*d*d,step=Math.max(1,Math.floor(1/0.08));
+  for(let i=0;i<total;i+=4*step){ const n=(rng()-0.5)*amount*255; p.pixels[i]+=n; p.pixels[i+1]+=n; p.pixels[i+2]+=n; }
   p.updatePixels();
 }
 
-// Vignette — dark edges
-function drawVignette(p, rng){
-  const ctx = p.drawingContext;
-  const cx=S.W/2, cy=S.H/2, r=Math.min(S.W,S.H)*0.55;
-  const grad = ctx.createRadialGradient(cx, cy, r*0.6, cx, cy, r*1.15);
-  grad.addColorStop(0, 'transparent');
-  grad.addColorStop(0.7, 'transparent');
-  grad.addColorStop(1, 'rgba(0,0,0,0.55)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, S.W, S.H);
+function drawVignette(p){
+  const ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.55;
+  const grad=ctx.createRadialGradient(cx,cy,r*0.6,cx,cy,r*1.15);
+  grad.addColorStop(0,'transparent'); grad.addColorStop(0.7,'transparent'); grad.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,S.W,S.H);
 }
 
-// Draw a shape with glow/bloom effect
-function drawShapeGlow(p, x, y, size, type, rng, rotVar, col, alpha=1){
-  p.push(); p.translate(x,y); p.rotate(rotVar*p.TWO_PI);
-  const t = type==='mixed' ? ['circles','lines','rects','triangles'][Math.floor(rng()*4)] : type;
+function drawWatermark(p){
+  if(S.tier==='pro')return;
+  const ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
+  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.textAlign='center';
+  ctx.fillText('Seed Studio · 种子画室',S.W/2,S.H-fs*0.8);
+  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillText('seedstudio.top',S.W/2,S.H-fs*0.1);
+}
 
-  // Glow layer
-  p.noStroke();
-  const glowCol = p.color(col); glowCol.setAlpha(alpha*30);
-  p.fill(glowCol);
-  if(t==='circles') p.circle(0,0,size*2.5);
-  else if(t==='rects'){ p.rectMode(p.CENTER); p.rect(0,0,size*2,size*2); }
-
-  // Main shape
-  const mainCol = p.color(col); mainCol.setAlpha(alpha*255);
-  p.fill(mainCol);
-  if(rng()>0.7){ p.noFill(); p.stroke(col); p.strokeWeight(p.random(0.5,1.8)); }
-
+function drawShapeGlow(p,x,y,size,type,rng,rotVar,col,alpha){
+  alpha=alpha||1; p.push(); p.translate(x,y); p.rotate(rotVar*p.TWO_PI);
+  var t=type==='mixed'?['circles','lines','rects','triangles'][Math.floor(rng()*4)]:type;
+  p.noStroke(); var gc=p.color(col); gc.setAlpha(alpha*30); p.fill(gc);
+  if(t==='circles')p.circle(0,0,size*2.5); else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*2,size*2);}
+  var mc=p.color(col); mc.setAlpha(alpha*255); p.fill(mc);
+  if(rng()>0.7){p.noFill();p.stroke(col);p.strokeWeight(p.random(0.5,1.8));}
   switch(t){
-    case 'circles':
-      p.circle(0,0,size);
-      if(rng()>0.5){ p.noFill(); p.strokeWeight(p.random(0.3,1.5)); p.circle(0,0,size*(0.3+rng()*0.45)); }
-      break;
-    case 'lines':
-      p.strokeWeight(p.random(0.8,3)); const a=rng()*p.TWO_PI, l=size*(0.5+rng()*0.5);
-      p.line(Math.cos(a)*l*0.5, Math.sin(a)*l*0.5, -Math.cos(a)*l*0.5, -Math.sin(a)*l*0.5);
-      if(rng()>0.4){ const a2=a+p.HALF_PI; p.line(Math.cos(a2)*l*0.3, Math.sin(a2)*l*0.3, -Math.cos(a2)*l*0.3, -Math.sin(a2)*l*0.3); }
-      break;
-    case 'rects':
-      p.rectMode(p.CENTER); const rw=size*(0.45+rng()*0.55), rh=size*(0.45+rng()*0.55);
-      p.rect(0,0,rw,rh);
-      if(rng()>0.5){ p.noFill(); p.strokeWeight(p.random(0.3,1.5)); p.rect(0,0,rw*0.5,rh*0.5); }
-      break;
-    case 'triangles':
-      const pts=[]; for(let i=0;i<3;i++){ const ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.5, rr=size*(0.35+rng()*0.3); pts.push({x:Math.cos(ang)*rr, y:Math.sin(ang)*rr}); }
-      p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);
-      break;
+    case'circles':p.circle(0,0,size);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.circle(0,0,size*(0.3+rng()*0.45));}break;
+    case'lines':p.strokeWeight(p.random(0.8,3));var a=rng()*p.TWO_PI,l=size*(0.5+rng()*0.5);p.line(Math.cos(a)*l*0.5,Math.sin(a)*l*0.5,-Math.cos(a)*l*0.5,-Math.sin(a)*l*0.5);if(rng()>0.4){var a2=a+p.HALF_PI;p.line(Math.cos(a2)*l*0.3,Math.sin(a2)*l*0.3,-Math.cos(a2)*l*0.3,-Math.sin(a2)*l*0.3);}break;
+    case'rects':p.rectMode(p.CENTER);var rw=size*(0.45+rng()*0.55),rh=size*(0.45+rng()*0.55);p.rect(0,0,rw,rh);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.rect(0,0,rw*0.5,rh*0.5);}break;
+    case'triangles':var pts=[];for(var i=0;i<3;i++){var ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.5,rr=size*(0.35+rng()*0.3);pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});}p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);break;
   }
   p.pop();
 }
 
-// Watermark for free tier — subtle but visible
-function drawWatermark(p){
-  if(S.tier==='pro') return;
-  const ctx=p.drawingContext;
-  const t='Seed Studio · 种子画室';
-  const fs=Math.min(S.W*0.04, 28);
-  ctx.font=`${fs}px "Segoe UI", system-ui, sans-serif`;
-  ctx.fillStyle='rgba(255,255,255,0.12)';
-  ctx.textAlign='center';
-  ctx.fillText(t, S.W/2, S.H-fs*0.8);
-  // Second smaller line
-  ctx.font=`${fs*0.55}px "Segoe UI", system-ui, sans-serif`;
-  ctx.fillStyle='rgba(255,255,255,0.08)';
-  ctx.fillText('seed.studio', S.W/2, S.H-fs*0.1);
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LAYOUT 1: VORTEX SPIRAL                                    ║
-// ╚══════════════════════════════════════════════════════════════╝
-function drawVortex(p, rng, pal, shape, density, scale, rot, noiseAmt){
-  drawBackground(p, pal);
-
-  const cx=S.W/2, cy=S.H/2, maxR=Math.min(S.W,S.H)*0.52;
-  const spirals=Math.floor(p.map(density,5,100,2,8));
-  const armsPerSpiral=Math.floor(p.map(density,5,100,2,5));
-  const pointsPerArm=Math.floor(p.map(density,5,100,30,180));
-
-  for(let s=0;s<spirals;s++){
-    const baseAngle=(s/spirals)*p.TWO_PI + rot*(p.PI/180);
-    const palCol=pal[1+Math.floor((s/spirals)*(pal.length-1))];
-
-    for(let arm=0;arm<armsPerSpiral;arm++){
-      const armOffset=(arm/armsPerSpiral)*p.TWO_PI;
-      p.noFill();
-
-      for(let i=1;i<pointsPerArm;i++){
-        const t=i/pointsPerArm;
-        const r=maxR*(0.02 + t*0.98);
-        const spiralAngle=baseAngle+armOffset+t*6*p.PI*(0.5+noiseAmt);
-        const noiseJitter=noiseAmt*(rng()-0.5)*maxR*0.06;
-
-        const x=cx+Math.cos(spiralAngle)*(r+noiseJitter);
-        const y=cy+Math.sin(spiralAngle)*(r+noiseJitter);
-
-        const elemSize=p.map(r,0,maxR,1.5,14)*scale*(0.4+rng()*0.7);
-        const alpha=p.map(t,0,1,0.15,0.9);
-
-        const col=p.color(palCol); col.setAlpha(alpha*255);
-        p.stroke(col); p.strokeWeight(p.map(r,0,maxR,0.3,3)*scale);
-        p.fill(col);
-
-        if(i%Math.max(1,Math.floor(20/density*10))===0){
-          drawShapeGlow(p,x,y,elemSize,shape,rng,rot/360*(rng()-0.5),palCol,alpha);
-        }
+// ═══════════════ LAYOUTS ═══════════════
+function drawVortex(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal); var cx=S.W/2,cy=S.H/2,maxR=Math.min(S.W,S.H)*0.52;
+  var spirals=Math.floor(p.map(density,5,100,2,8)),arms=Math.floor(p.map(density,5,100,2,5)),pts=Math.floor(p.map(density,5,100,30,180));
+  for(var s=0;s<spirals;s++){ var ba=(s/spirals)*p.TWO_PI+rot*(p.PI/180),pc=pal[1+Math.floor((s/spirals)*(pal.length-1))];
+    for(var arm=0;arm<arms;arm++){ var ao=(arm/arms)*p.TWO_PI; p.noFill();
+      for(var i=1;i<pts;i++){ var t=i/pts,r=maxR*(0.02+t*0.98),sa=ba+ao+t*6*p.PI*(0.5+noiseAmt),nj=noiseAmt*(rng()-0.5)*maxR*0.06;
+        var x=cx+Math.cos(sa)*(r+nj),y=cy+Math.sin(sa)*(r+nj),es=p.map(r,0,maxR,1.5,14)*scale*(0.4+rng()*0.7),al=p.map(t,0,1,0.15,0.9);
+        var col=p.color(pc);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(r,0,maxR,0.3,3)*scale);p.fill(col);
+        if(i%Math.max(1,Math.floor(20/density*10))===0)drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),pc,al);
       }
     }
   }
-
-  // Center glow
-  const ctx=p.drawingContext;
-  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.15);
-  cg.addColorStop(0,pal[pal.length-1]+'40'); cg.addColorStop(1,'transparent');
-  ctx.fillStyle=cg; ctx.fillRect(0,0,S.W,S.H);
-
-  drawVignette(p, rng);
-  drawGrain(p, rng, 0.02);
+  var ctx=p.drawingContext,cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.15);cg.addColorStop(0,pal[pal.length-1]+'40');cg.addColorStop(1,'transparent');ctx.fillStyle=cg;ctx.fillRect(0,0,S.W,S.H);
+  drawVignette(p); drawGrain(p,rng,0.02);
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LAYOUT 2: MONDRIAN (De Stijl)                              ║
-// ╚══════════════════════════════════════════════════════════════╝
-function drawMondrian(p, rng, pal, shape, density, scale, rot, noiseAmt){
-  // Clean white/light background
-  p.background(pal[pal.length-1]);
-
-  const minSize=Math.floor(p.map(density,5,100,120,25));
-  const lineWidth=Math.floor(p.map(density,5,100,2,14)*scale);
-  const lineColor=pal[0]; // darkest color for lines
-
-  // Recursive subdivision
-  const rects=[{x:0,y:0,w:S.W,h:S.H}];
-  const divisions=Math.floor(p.map(density,5,100,3,12));
-
-  for(let d=0;d<divisions;d++){
-    const idx=Math.floor(rng()*rects.length);
-    const r=rects[idx];
-    if(r.w<minSize*2&&r.h<minSize*2) continue;
-
-    // Choose split direction
-    const splitH=rng()>0.5&&r.w>minSize*2;
-    if(splitH){
-      const splitX=r.x+minSize+rng()*(r.w-minSize*2);
-      rects.splice(idx,1,{x:r.x,y:r.y,w:splitX-r.x,h:r.h},{x:splitX+lineWidth,y:r.y,w:r.x+r.w-splitX-lineWidth,h:r.h});
-    } else if(r.h>minSize*2){
-      const splitY=r.y+minSize+rng()*(r.h-minSize*2);
-      rects.splice(idx,1,{x:r.x,y:r.y,w:r.w,h:splitY-r.y},{x:r.x,y:splitY+lineWidth,w:r.w,h:r.y+r.h-splitY-lineWidth});
-    }
+function drawMondrian(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  p.background(pal[pal.length-1]); var minSize=Math.floor(p.map(density,5,100,120,25)),lw=Math.floor(p.map(density,5,100,2,14)*scale),lc=pal[0];
+  var rects=[{x:0,y:0,w:S.W,h:S.H}],divs=Math.floor(p.map(density,5,100,3,12));
+  for(var d=0;d<divs;d++){ var idx=Math.floor(rng()*rects.length),r=rects[idx]; if(r.w<minSize*2&&r.h<minSize*2)continue;
+    if(rng()>0.5&&r.w>minSize*2){ var sx=r.x+minSize+rng()*(r.w-minSize*2); rects.splice(idx,1,{x:r.x,y:r.y,w:sx-r.x,h:r.h},{x:sx+lw,y:r.y,w:r.x+r.w-sx-lw,h:r.h}); }
+    else if(r.h>minSize*2){ var sy=r.y+minSize+rng()*(r.h-minSize*2); rects.splice(idx,1,{x:r.x,y:r.y,w:r.w,h:sy-r.y},{x:r.x,y:sy+lw,w:r.w,h:r.y+r.h-sy-lw}); }
   }
-
-  // Draw rectangles
-  rects.forEach(r=>{
-    const useColor=rng()>0.25; // 75% colored, 25% white
-    if(useColor){
-      const colIdx=Math.floor(rng()*(pal.length-1));
-      p.fill(pal[colIdx]);
-    } else {
-      p.fill(pal[pal.length-1]); // white
-    }
-    p.noStroke();
-    p.rect(r.x+lineWidth/2, r.y+lineWidth/2, r.w-lineWidth, r.h-lineWidth);
-  });
-
-  // Draw black lines overlay
-  p.noFill(); p.stroke(lineColor); p.strokeWeight(lineWidth); p.strokeCap(p.SQUARE);
-
-  // Draw all dividing lines
-  const allX=new Set(); const allY=new Set();
-  rects.forEach(r=>{ allX.add(r.x); allX.add(r.x+r.w); allY.add(r.y); allY.add(r.y+r.h); });
-
-  allX.forEach(x=>{ if(x>0&&x<S.W) p.line(x,0,x,S.H); });
-  allY.forEach(y=>{ if(y>0&&y<S.H) p.line(0,y,S.W,y); });
-
-  // Border
-  p.strokeWeight(lineWidth*1.5);
-  p.noFill(); p.rect(lineWidth/2,lineWidth/2,S.W-lineWidth,S.H-lineWidth);
-
-  // Add small shape accents in some rectangles
-  rects.forEach(r=>{
-    if(rng()>0.85&&r.w>minSize*1.5&&r.h>minSize*1.5){
-      const cx=r.x+r.w/2, cy=r.y+r.h/2;
-      const sz=Math.min(r.w,r.h)*0.3*scale;
-      const col=pal[Math.floor(rng()*(pal.length-2))+1];
-      p.fill(col); p.noStroke();
-      drawShapeGlow(p,cx,cy,sz,shape,rng,rot/360*(rng()-0.5),col,0.7);
-    }
-  });
-
-  drawGrain(p, rng, 0.015);
+  rects.forEach(function(r){ var uc=rng()>0.25; p.fill(uc?pal[Math.floor(rng()*(pal.length-1))]:pal[pal.length-1]); p.noStroke(); p.rect(r.x+lw/2,r.y+lw/2,r.w-lw,r.h-lw); });
+  p.noFill();p.stroke(lc);p.strokeWeight(lw);p.strokeCap(p.SQUARE);
+  var allX=new Set(),allY=new Set(); rects.forEach(function(r){allX.add(r.x);allX.add(r.x+r.w);allY.add(r.y);allY.add(r.y+r.h);});
+  allX.forEach(function(x){if(x>0&&x<S.W)p.line(x,0,x,S.H);}); allY.forEach(function(y){if(y>0&&y<S.H)p.line(0,y,S.W,y);});
+  p.strokeWeight(lw*1.5);p.noFill();p.rect(lw/2,lw/2,S.W-lw,S.H-lw);
+  rects.forEach(function(r){if(rng()>0.85&&r.w>minSize*1.5&&r.h>minSize*1.5){var cx=r.x+r.w/2,cy=r.y+r.h/2,sz=Math.min(r.w,r.h)*0.3*scale,cl=pal[Math.floor(rng()*(pal.length-2))+1];p.fill(cl);p.noStroke();drawShapeGlow(p,cx,cy,sz,shape,rng,rot/360*(rng()-0.5),cl,0.7);}});
+  drawGrain(p,rng,0.015);
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LAYOUT 3: GALAXY (Particle Gravity)                        ║
-// ╚══════════════════════════════════════════════════════════════╝
-function drawGalaxy(p, rng, pal, shape, density, scale, rot, noiseAmt){
-  drawBackground(p, pal);
-
-  const numCenters=Math.floor(p.map(density,5,100,2,6));
-  const centers=[];
-  for(let i=0;i<numCenters;i++){
-    centers.push({
-      x: S.W*(0.15+rng()*0.7),
-      y: S.H*(0.15+rng()*0.7),
-      mass: 0.5+rng()*1.5,
-      color: pal[1+Math.floor(rng()*(pal.length-1))],
-    });
-  }
-
-  const numParticles=Math.floor(p.map(density,5,100,200,3000));
-  const steps=Math.floor(p.map(density,5,100,15,50));
-
-  p.noFill();
-  for(let i=0;i<numParticles;i++){
-    let px=rng()*S.W, py=rng()*S.H;
-    let vx=(rng()-0.5)*2, vy=(rng()-0.5)*2;
-    const nearest=centers[Math.floor(rng()*centers.length)];
-
+function drawGalaxy(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal); var nc=Math.floor(p.map(density,5,100,2,6)),centers=[];
+  for(var i=0;i<nc;i++)centers.push({x:S.W*(0.15+rng()*0.7),y:S.H*(0.15+rng()*0.7),mass:0.5+rng()*1.5,color:pal[1+Math.floor(rng()*(pal.length-1))]});
+  var nP=Math.floor(p.map(density,5,100,200,3000)),steps=Math.floor(p.map(density,5,100,15,50));p.noFill();
+  for(var i=0;i<nP;i++){ var px=rng()*S.W,py=rng()*S.H,vx=(rng()-0.5)*2,vy=(rng()-0.5)*2,nr=centers[Math.floor(rng()*centers.length)];
     p.beginShape();
-    for(let t=0;t<steps;t++){
-      // Gravity toward nearest center + noise
-      const dx=nearest.x-px, dy=nearest.y-py;
-      const dist=Math.max(Math.sqrt(dx*dx+dy*dy), 2);
-      const force=nearest.mass*0.08/(dist*0.1);
-      vx+=dx/dist*force; vy+=dy/dist*force;
-      vx+=noiseAmt*(rng()-0.5)*0.4; vy+=noiseAmt*(rng()-0.5)*0.4;
-
-      // Rotation influence
-      const rotF=rot/360*0.15;
-      vx+= -dy/dist*rotF; vy+= dx/dist*rotF;
-
-      vx*=0.97; vy*=0.97; // damping
-      px+=vx*scale; py+=vy*scale;
-
-      const alpha=p.map(t,0,steps,0.6,0.02);
-      const col=p.color(nearest.color); col.setAlpha(alpha*255);
-      p.stroke(col);
-      p.strokeWeight(p.map(t,0,steps,1.8,0.15));
-
-      p.vertex(px,py);
-      if(px<-20||px>S.W+20||py<-20||py>S.H+20) break;
+    for(var t=0;t<steps;t++){ var dx=nr.x-px,dy=nr.y-py,dist=Math.max(Math.sqrt(dx*dx+dy*dy),2),force=nr.mass*0.08/(dist*0.1);vx+=dx/dist*force;vy+=dy/dist*force;
+      vx+=noiseAmt*(rng()-0.5)*0.4;vy+=noiseAmt*(rng()-0.5)*0.4;var rf=rot/360*0.15;vx+=-dy/dist*rf;vy+=dx/dist*rf;vx*=0.97;vy*=0.97;px+=vx*scale;py+=vy*scale;
+      var al=p.map(t,0,steps,0.6,0.02),col=p.color(nr.color);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(t,0,steps,1.8,0.15));p.vertex(px,py);
+      if(px<-20||px>S.W+20||py<-20||py>S.H+20)break;
     }
     p.endShape();
-
-    // Glow dot at particle end
-    if(rng()>0.97){
-      const col=p.color(nearest.color); col.setAlpha(rng()*180+30);
-      p.fill(col); p.noStroke();
-      p.circle(px,py,rng()*3*scale+1);
-    }
+    if(rng()>0.97){var col=p.color(nr.color);col.setAlpha(rng()*180+30);p.fill(col);p.noStroke();p.circle(px,py,rng()*3*scale+1);}
   }
-
-  // Center glows
-  centers.forEach(c=>{
-    const ctx=p.drawingContext;
-    const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,S.H*0.12);
-    g.addColorStop(0,c.color+'30'); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.fillRect(0,0,S.W,S.H);
-  });
-
-  drawVignette(p, rng);
-  drawGrain(p, rng, 0.025);
+  centers.forEach(function(c){var ctx=p.drawingContext,g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,S.H*0.12);g.addColorStop(0,c.color+'30');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,S.W,S.H);});
+  drawVignette(p);drawGrain(p,rng,0.025);
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LAYOUT 4: KALEIDOSCOPE (N-fold symmetry)                   ║
-// ╚══════════════════════════════════════════════════════════════╝
-function drawKaleidoscope(p, rng, pal, shape, density, scale, rot, noiseAmt){
-  drawBackground(p, pal);
-
-  const cx=S.W/2, cy=S.H/2;
-  const folds=Math.floor(p.map(density,5,100,5,18));
-  const numElements=Math.floor(p.map(density,5,100,8,50));
-  const maxR=Math.min(S.W,S.H)*0.48;
-  const sliceAngle=p.TWO_PI/folds;
-
-  // Draw in one wedge, reflect automatically
-  for(let elem=0;elem<numElements;elem++){
-    const r=maxR*(0.03+rng()*0.97);
-    const baseAng=rng()*sliceAngle;
-    const elemSize=p.map(r,0,maxR,2,22)*scale*(0.4+rng()*0.7);
-    const colIdx=1+Math.floor((r/maxR)*(pal.length-1));
-    const col=pal[Math.min(colIdx, pal.length-1)];
-
-    for(let f=0;f<folds;f++){
-      const angle=baseAng+f*sliceAngle;
-      const jitterR=noiseAmt*maxR*0.04*(rng()-0.5);
-      const jitterA=noiseAmt*sliceAngle*0.3*(rng()-0.5);
-      const x=cx+Math.cos(angle+jitterA)*(r+jitterR);
-      const y=cy+Math.sin(angle+jitterA)*(r+jitterR);
-
-      // Mirrored copy
-      const mirrorAngle=sliceAngle-baseAng+f*sliceAngle;
-      const mx=cx+Math.cos(mirrorAngle)*(r+jitterR);
-      const my=cy+Math.sin(mirrorAngle)*(r+jitterR);
-
-      drawShapeGlow(p,x,y,elemSize,shape,rng,rot/360*(rng()-0.5),col,0.75);
-      if(rng()>0.7){
-        drawShapeGlow(p,mx,my,elemSize*0.7,shape,rng,rot/360*(rng()-0.5),col,0.45);
-      }
+function drawKaleidoscope(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal); var cx=S.W/2,cy=S.H/2,folds=Math.floor(p.map(density,5,100,5,18)),ne=Math.floor(p.map(density,5,100,8,50)),maxR=Math.min(S.W,S.H)*0.48,sa=p.TWO_PI/folds;
+  for(var e=0;e<ne;e++){ var r=maxR*(0.03+rng()*0.97),ba=rng()*sa,es=p.map(r,0,maxR,2,22)*scale*(0.4+rng()*0.7),ci=1+Math.floor((r/maxR)*(pal.length-1)),col=pal[Math.min(ci,pal.length-1)];
+    for(var f=0;f<folds;f++){ var ang=ba+f*sa,jr=noiseAmt*maxR*0.04*(rng()-0.5),ja=noiseAmt*sa*0.3*(rng()-0.5),x=cx+Math.cos(ang+ja)*(r+jr),y=cy+Math.sin(ang+ja)*(r+jr),ma=sa-ba+f*sa,mx=cx+Math.cos(ma)*(r+jr),my=cy+Math.sin(ma)*(r+jr);
+      drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),col,0.75); if(rng()>0.7)drawShapeGlow(p,mx,my,es*0.7,shape,rng,rot/360*(rng()-0.5),col,0.45);
     }
   }
-
-  // Center mandala
-  p.fill(pal[pal.length-1]); p.noStroke();
-  p.circle(cx,cy,12*scale);
-  for(let i=1;i<=3;i++){
-    p.noFill(); p.stroke(pal[1]); p.strokeWeight(1.5);
-    p.circle(cx,cy,18*scale*i);
-  }
-
-  drawGrain(p, rng, 0.02);
+  p.fill(pal[pal.length-1]);p.noStroke();p.circle(cx,cy,12*scale);
+  for(var i=1;i<=3;i++){p.noFill();p.stroke(pal[1]);p.strokeWeight(1.5);p.circle(cx,cy,18*scale*i);}
+  drawGrain(p,rng,0.02);
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LAYOUT 5: FLUID FLOW                                       ║
-// ╚══════════════════════════════════════════════════════════════╝
-function drawFluid(p, rng, pal, shape, density, scale, rot, noiseAmt){
-  drawBackground(p, pal);
-
-  // Build multi-octave flow field
-  const fCols=Math.floor(S.W/15), fRows=Math.floor(S.H/15);
-  const field=[];
-  const zBase=rng()*200;
-
-  for(let y=0;y<fRows;y++){
-    field[y]=[];
-    for(let x=0;x<fCols;x++){
-      field[y][x]=p.noise(x*0.08, y*0.08, zBase)*p.TWO_PI*3;
-    }
-  }
-
-  const numLayers=Math.floor(p.map(density,5,100,1,4));
-  const particlesPerLayer=Math.floor(p.map(density,5,100,30,200));
-
-  for(let layer=0;layer<numLayers;layer++){
-    const layerColor=pal[1+Math.floor((layer/numLayers)*(pal.length-1))];
-    const steps=Math.floor(p.map(density,5,100,25,80));
-
-    for(let i=0;i<particlesPerLayer;i++){
-      let px=rng()*S.W, py=rng()*S.H;
-      const startT=rng();
-
-      p.noFill();
-      p.beginShape();
-      for(let t=0;t<steps;t++){
-        const fc=Math.floor(p.constrain(px/15,0,fCols-1));
-        const fr=Math.floor(p.constrain(py/15,0,fRows-1));
-        const fAngle=(field[fr]&&field[fr][fc])?field[fr][fc]:0;
-
-        const stepS=(1+rng()*3)*scale;
-        px+=Math.cos(fAngle)*stepS; py+=Math.sin(fAngle)*stepS;
-
-        // Rotation influence
-        const ri=rot/360*0.4;
-        px+=Math.cos(fAngle+p.HALF_PI)*ri; py+=Math.sin(fAngle+p.HALF_PI)*ri;
-
-        // Noise jitter
-        px+=(rng()-0.5)*noiseAmt*3; py+=(rng()-0.5)*noiseAmt*3;
-
-        const progress=(startT+t/steps)%1;
-        const alpha=p.map(progress,0,1,0.7,0.03);
-        const col=p.color(layerColor); col.setAlpha(alpha*255);
-        p.stroke(col);
-        p.strokeWeight(p.map(progress,0,1,3*scale,0.2));
-
-        p.vertex(px,py);
-        if(px<-20||px>S.W+20||py<-20||py>S.H+20) break;
+function drawFluid(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal); var fc=Math.floor(S.W/15),fr=Math.floor(S.H/15),field=[],zb=rng()*200;
+  for(var y=0;y<fr;y++){field[y]=[];for(var x=0;x<fc;x++)field[y][x]=p.noise(x*0.08,y*0.08,zb)*p.TWO_PI*3;}
+  var nl=Math.floor(p.map(density,5,100,1,4)),ppl=Math.floor(p.map(density,5,100,30,200));
+  for(var l=0;l<nl;l++){ var lc=pal[1+Math.floor((l/nl)*(pal.length-1))],steps=Math.floor(p.map(density,5,100,25,80));
+    for(var i=0;i<ppl;i++){ var px=rng()*S.W,py=rng()*S.H,st=rng();p.noFill();p.beginShape();
+      for(var t=0;t<steps;t++){ var fcx=Math.floor(p.constrain(px/15,0,fc-1)),fry=Math.floor(p.constrain(py/15,0,fr-1)),fa=(field[fry]&&field[fry][fcx])?field[fry][fcx]:0,ss=(1+rng()*3)*scale;
+        px+=Math.cos(fa)*ss;py+=Math.sin(fa)*ss;var ri=rot/360*0.4;px+=Math.cos(fa+p.HALF_PI)*ri;py+=Math.sin(fa+p.HALF_PI)*ri;px+=(rng()-0.5)*noiseAmt*3;py+=(rng()-0.5)*noiseAmt*3;
+        var prog=(st+t/steps)%1,al=p.map(prog,0,1,0.7,0.03),col=p.color(lc);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(prog,0,1,3*scale,0.2));p.vertex(px,py);
+        if(px<-20||px>S.W+20||py<-20||py>S.H+20)break;
       }
       p.endShape();
     }
   }
-
-  drawVignette(p, rng);
-  drawGrain(p, rng, 0.022);
+  drawVignette(p);drawGrain(p,rng,0.022);
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  MAIN DRAW                                                  ║
-// ╚══════════════════════════════════════════════════════════════╝
-let p5inst;
+// ═══════════════ MAIN DRAW ═══════════════
+var p5inst;
 function draw(){
-  if(!p5inst) return;
-  const p=p5inst;
-  p.resizeCanvas(S.W, S.H);
-  p.pixelDensity(1);
-
-  const rng=mulberry32(S.seed);
-  p.randomSeed(S.seed); p.noiseSeed(S.seed);
-  const pal=PALETTES[S.palette];
-
+  if(!p5inst)return; var p=p5inst;
+  p.resizeCanvas(S.W,S.H); p.pixelDensity(1);
+  var rng=mulberry32(S.seed); p.randomSeed(S.seed); p.noiseSeed(S.seed);
+  var pal=PALETTES[S.palette];
   switch(S.layout){
-    case 'vortex':       drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise); break;
-    case 'mondrian':     drawMondrian(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise); break;
-    case 'galaxy':       drawGalaxy(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise); break;
-    case 'kaleidoscope': drawKaleidoscope(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise); break;
-    case 'fluid':        drawFluid(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise); break;
-    default:             drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
+    case'vortex':drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'mondrian':drawMondrian(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'galaxy':drawGalaxy(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'kaleidoscope':drawKaleidoscope(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'fluid':drawFluid(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
   }
-
-  // Watermark for free tier
   drawWatermark(p);
-
-  // Signature
-  p.fill(255,255,255,60); p.noStroke(); p.textSize(11); p.textAlign(p.RIGHT,p.BOTTOM);
-  p.text(`🌱 seed:${S.seed} · ${S.layout} · ${S.palette}`, S.W-16, S.H-12);
-
+  p.fill(255,255,255,60);p.noStroke();p.textSize(11);p.textAlign(p.RIGHT,p.BOTTOM);
+  p.text('🌱 seed:'+S.seed+' · '+S.layout+' · '+S.palette,S.W-16,S.H-12);
   updateUI();
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  UI HELPERS                                                 ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ═══════════════ UI ═══════════════
 function updateUI(){
-  document.getElementById('seedVal').innerHTML = `<strong>${S.seed}</strong>`;
+  document.getElementById('seedVal').innerHTML='<strong>'+S.seed+'</strong>';
   document.getElementById('vDensity').textContent=S.density;
   document.getElementById('vScale').textContent=S.scale.toFixed(2);
   document.getElementById('vRot').textContent=S.rotation+'°';
   document.getElementById('vNoise').textContent=S.noise.toFixed(2);
 }
-
 function syncAll(){
-  ['density','scale','rotation','noise'].forEach(id=>document.getElementById(id).value=S[id]);
-  document.querySelectorAll('#layoutPills button').forEach(b=>b.classList.toggle('active',b.value===S.layout));
-  document.querySelectorAll('#shapePills button').forEach(b=>b.classList.toggle('active',b.value===S.shape));
-  document.querySelectorAll('#swatches button').forEach(b=>b.classList.toggle('active',b.dataset.p===S.palette));
-  document.querySelectorAll('#resPills button').forEach(b=>b.classList.toggle('active',+b.dataset.w===S.W&&+b.dataset.h===S.H));
+  document.getElementById('density').value=S.density; document.getElementById('scale').value=S.scale;
+  document.getElementById('rotation').value=S.rotation; document.getElementById('noise').value=S.noise;
+  document.querySelectorAll('#layoutPills button').forEach(function(b){b.classList.toggle('active',b.value===S.layout);});
+  document.querySelectorAll('#shapePills button').forEach(function(b){b.classList.toggle('active',b.value===S.shape);});
+  document.querySelectorAll('#swatches button').forEach(function(b){b.classList.toggle('active',b.dataset.p===S.palette);});
+  document.querySelectorAll('#resPills button').forEach(function(b){b.classList.toggle('active',+b.dataset.w===S.W&&+b.dataset.h===S.H);});
   updateUI();
 }
-
 function saveURL(){
-  const p=new URLSearchParams();
-  p.set('s',S.seed); p.set('l',S.layout); p.set('c',S.palette); p.set('sh',S.shape);
-  p.set('d',S.density); p.set('sc',S.scale); p.set('r',S.rotation); p.set('n',S.noise);
-  p.set('w',S.W); p.set('h',S.H);
+  var p=new URLSearchParams(); p.set('s',S.seed); p.set('l',S.layout); p.set('c',S.palette); p.set('sh',S.shape);
+  p.set('d',S.density); p.set('sc',S.scale); p.set('r',S.rotation); p.set('n',S.noise); p.set('w',S.W); p.set('h',S.H);
   window.history.replaceState({},'','?'+p.toString());
 }
-
 function loadURL(){
-  const p=new URLSearchParams(window.location.search);
-  if(!p.has('s')) return;
-  S.seed=+p.get('s')||S.seed;
-  S.layout=p.get('l')||S.layout;
-  S.palette=p.get('c')||S.palette;
-  S.shape=p.get('sh')||S.shape;
-  S.density=+p.get('d')||S.density;
-  S.scale=+p.get('sc')||S.scale;
-  S.rotation=+p.get('r')||S.rotation;
-  S.noise=+p.get('n')||S.noise;
-  S.W=+p.get('w')||S.W;
-  S.H=+p.get('h')||S.H;
+  var p=new URLSearchParams(window.location.search); if(!p.has('s'))return;
+  S.seed=+p.get('s')||S.seed; S.layout=p.get('l')||S.layout; S.palette=p.get('c')||S.palette; S.shape=p.get('sh')||S.shape;
+  S.density=+p.get('d')||S.density; S.scale=+p.get('sc')||S.scale; S.rotation=+p.get('r')||S.rotation; S.noise=+p.get('n')||S.noise;
+  S.W=+p.get('w')||S.W; S.H=+p.get('h')||S.H;
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  LICENSE KEY SYSTEM                                         ║
-// ╚══════════════════════════════════════════════════════════════╝
-// Pre-generated license keys (SHA-256 hashed). Valid keys below.
-// Lifetime: SEED-LIFE-XXXX where X=alphanumeric
-const VALID_HASHES_LIFETIME = [
-  'b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a',
-  'c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e',
-  '91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0',
-];
-const VALID_HASHES_PRO = [
-  'd761cb5047032a550655b9b3bb4f533e7c3837d00847421c671d1eea71077fb34',
-  'ff44a9b3f827ec3251898763799632f40e303da346acb83386e1ecee3fea1be9',
-];
+// ═══════════════ TOAST ═══════════════
+var tt;
+function toast(m){ var el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){el.classList.remove('show');},2200); }
 
-async function hashKey(key){
-  const d=new TextEncoder().encode(key.trim().toUpperCase());
-  const h=await crypto.subtle.digest('SHA-256',d);
-  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function validateLicense(key){
-  const h=await hashKey(key);
-  if(VALID_HASHES_LIFETIME.includes(h)) return 'lifetime';
-  if(VALID_HASHES_PRO.includes(h)) return 'pro';
-  return null;
-}
-
-async function activateLicense(key){
-  const tier=await validateLicense(key);
-  if(!tier){ toast('❌ 无效的 License Key'); return false; }
-  S.tier='pro';
-  const exp=tier==='lifetime'?'2099-12-31':new Date(Date.now()+365*86400000).toISOString().slice(0,10);
-  localStorage.setItem('seedstudio_license',JSON.stringify({tier,key,exp,activated:new Date().toISOString()}));
-  toast('🎉 Pro 已激活！有效期至 '+exp);
-  syncAll(); draw(); saveURL();
-  return true;
-}
-
-function checkStoredLicense(){
-  try{
-    const d=JSON.parse(localStorage.getItem('seedstudio_license'));
-    if(d&&d.exp&&new Date(d.exp)>new Date()){ S.tier='pro'; return true; }
-  }catch(e){}
-  return false;
-}
-
-// Payment modal
-function showPayModal(plan){
-  const m=document.getElementById('payModal');
-  if(plan==='lifetime'){ document.getElementById('payPrice').textContent='¥99 永久'; document.getElementById('payAmt').textContent='¥99'; }
-  else { document.getElementById('payPrice').textContent='¥14.99/月'; document.getElementById('payAmt').textContent='¥14.99'; }
-  m.classList.add('show');
-}
-function hidePayModal(){ document.getElementById('payModal').classList.remove('show'); }
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  TOAST                                                      ║
-// ╚══════════════════════════════════════════════════════════════╝
-let tt;
-function toast(msg){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.classList.add('show');
-  clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),2200);
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  HISTORY                                                    ║
-// ╚══════════════════════════════════════════════════════════════╝
-function pushHistory(){
-  S.history=[snap(),...S.history].slice(0,20);
-  renderHistory();
-}
+// ═══════════════ HISTORY ═══════════════
+function pushHistory(){ S.history=[snap()].concat(S.history).slice(0,20); renderHistory(); }
 function undo(){
-  if(S.history.length<2){ toast('没有更多历史'); return; }
-  S.history.shift();
-  Object.assign(S,S.history[0]);
-  syncAll(); draw(); saveURL(); renderHistory();
+  if(S.history.length<2){toast('没有更多历史');return;} S.history.shift(); Object.assign(S,S.history[0]); syncAll();draw();saveURL();renderHistory();
 }
 function renderHistory(){
-  const el=document.getElementById('historyList');
-  if(!S.history.length){ el.innerHTML='<div style="color:var(--muted);font-size:0.72rem;padding:6px;">随机生成后出现在这里</div>'; return; }
-  el.innerHTML=S.history.slice(0,10).map((s,i)=>`<div class="history-item" data-idx="${i}"><span class="seed-num">#${String(s.seed).slice(-8)}</span><span style="color:var(--muted)">${s.layout}·${s.palette}</span></div>`).join('');
-  el.querySelectorAll('.history-item').forEach(el=>{ el.addEventListener('click',()=>{
-    const snap=S.history[+el.dataset.idx];
-    if(snap){ Object.assign(S,snap); syncAll(); draw(); saveURL(); }
-  });});
+  var el=document.getElementById('historyList');
+  if(!S.history.length){el.innerHTML='<div style=\"color:var(--muted);font-size:0.72rem;padding:6px;\">随机生成后出现在这里</div>';return;}
+  el.innerHTML=S.history.slice(0,10).map(function(s,i){return'<div class=\"history-item\" data-idx=\"'+i+'\"><span class=\"seed-num\">#'+String(s.seed).slice(-8)+'</span><span style=\"color:var(--muted)\">'+s.layout+'·'+s.palette+'</span></div>';}).join('');
+  el.querySelectorAll('.history-item').forEach(function(el){el.addEventListener('click',function(){var snap=S.history[+el.dataset.idx];if(snap){Object.assign(S,snap);syncAll();draw();saveURL();}});});
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  PLUGINS                                                    ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ═══════════════ PLUGINS ═══════════════
 function randomize(){
-  pushHistory();
-  S.seed=Math.floor(Math.random()*1e9);
+  pushHistory();S.seed=Math.floor(Math.random()*1e9);
   S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid'][Math.floor(Math.random()*5)];
   S.palette=PAL_KEYS[Math.floor(Math.random()*PAL_KEYS.length)];
   S.shape=['circles','lines','rects','triangles','mixed'][Math.floor(Math.random()*5)];
-  S.density=Math.floor(Math.random()*80)+10;
-  S.scale=Math.round((Math.random()*2+0.3)*100)/100;
-  S.rotation=Math.floor(Math.random()*360);
-  S.noise=Math.round(Math.random()*100)/100;
-  syncAll(); draw(); saveURL();
-  toast('🎲 新海报 · 种子 '+S.seed);
+  S.density=Math.floor(Math.random()*80)+10;S.scale=Math.round((Math.random()*2+0.3)*100)/100;S.rotation=Math.floor(Math.random()*360);S.noise=Math.round(Math.random()*100)/100;
+  syncAll();draw();saveURL();toast('🎲 新海报 · 种子 '+S.seed);
 }
-
 function exportPNG(){
-  if(!p5inst) return;
-  const ow=S.W, oh=S.H;
-
-  // Free tier: max 1200px on longest side, with watermark
-  const maxFree=1200;
-  if(S.tier==='free'){
-    const longest=Math.max(ow, oh);
-    if(longest>maxFree){
-      const ratio=maxFree/longest;
-      S.W=Math.floor(ow*ratio); S.H=Math.floor(oh*ratio);
-    }
-  }
-
-  // Render at 2x for pro, 1x for free
-  const scale=S.tier==='pro'?2:1;
-  const fw=S.W, fh=S.H;
-  S.W=fw*scale; S.H=fh*scale; draw();
-  p5inst.save(`seedstudio_${S.seed}_${S.layout}_${S.palette}${S.tier==='free'?'_free':''}.png`);
-  S.W=fw; S.H=fh; draw();
-
-  if(S.tier==='free'){
-    toast('📥 已导出 (免费版含水印) · 升级Pro获4K无水印');
-  } else {
-    toast('📥 Pro 4K 无水印已导出');
-  }
+  if(!p5inst)return; var ow=S.W,oh=S.H;
+  if(S.tier==='free'){var longest=Math.max(ow,oh);if(longest>1200){var ratio=1200/longest;S.W=Math.floor(ow*ratio);S.H=Math.floor(oh*ratio);}}
+  var scale=S.tier==='pro'?2:1,fw=S.W,fh=S.H;S.W=fw*scale;S.H=fh*scale;draw();
+  p5inst.save('seedstudio_'+S.seed+'_'+S.layout+'_'+S.palette+(S.tier==='free'?'_free':'')+'.png');
+  S.W=fw;S.H=fh;draw();
+  toast(S.tier==='free'?'📥 已导出(免费版含水印) · 升级Pro获4K无水印':'📥 Pro 4K无水印已导出');
 }
-
-function copyImage(){
-  if(!p5inst) return;
-  p5inst.canvas.elt.toBlob(b=>{
-    navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(
-      ()=>toast('📋 已复制到剪贴板'),
-      ()=>toast('❌ 失败，请导出 PNG')
-    );
-  });
+function copyImg(){
+  if(!p5inst)return;p5inst.canvas.elt.toBlob(function(b){navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(function(){toast('📋 已复制到剪贴板');},function(){toast('❌ 失败，请用导出PNG');});});
 }
+function copyLink(){navigator.clipboard.writeText(window.location.href).then(function(){toast('🔗 链接已复制');},function(){toast('⚠️ 复制失败');});}
+function saveSet(){var b=new Blob([JSON.stringify(snap(),null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='seedstudio_settings_'+S.seed+'.json';a.click();toast('💾 设置已保存');}
+function loadSet(file){var r=new FileReader();r.onload=function(e){try{var d=JSON.parse(e.target.result);if(d.seed===undefined)throw 0;pushHistory();Object.assign(S,d);syncAll();draw();saveURL();toast('📂 已加载 · 种子 '+S.seed);}catch(x){toast('❌ 无效设置文件');}};r.readAsText(file);}
 
-function copyLink(){
-  navigator.clipboard.writeText(window.location.href).then(
-    ()=>toast('🔗 种子链接已复制'),
-    ()=>toast('⚠️ 复制失败')
-  );
+// ═══════════════ LICENSE ═══════════════
+var LICENSE_HASHES=['b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a','c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e','91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0'];
+async function validateLicense(key){
+  var d=new TextEncoder().encode(key.trim().toUpperCase());var h=await crypto.subtle.digest('SHA-256',d);
+  var hex=Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  return LICENSE_HASHES.includes(hex)?'lifetime':null;
 }
-
-function saveSettings(){
-  const b=new Blob([JSON.stringify(snap(),null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(b);
-  a.download=`poster-settings_${S.seed}.json`; a.click();
-  toast('💾 设置已保存');
+async function activateLicense(key){
+  var tier=await validateLicense(key);if(!tier){toast('❌ 无效的 License Key');return false;}
+  S.tier='pro';var exp=tier==='lifetime'?'2099-12-31':new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+  localStorage.setItem('seedstudio_license',JSON.stringify({tier:tier,key:key,exp:exp,activated:new Date().toISOString()}));
+  toast('🎉 Pro已激活！有效期至 '+exp);syncAll();draw();saveURL();return true;
 }
-
-function loadSettings(file){
-  const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const d=JSON.parse(e.target.result);
-      if(d.seed===undefined) throw 0;
-      pushHistory(); Object.assign(S,d); syncAll(); draw(); saveURL();
-      toast('📂 已加载 · 种子 '+S.seed);
-    }catch(_){ toast('❌ 无效设置文件'); }
-  };
-  r.readAsText(file);
+function checkStoredLicense(){
+  try{var d=JSON.parse(localStorage.getItem('seedstudio_license'));if(d&&d.exp&&new Date(d.exp)>new Date()){S.tier='pro';return true;}}catch(e){}
+  return false;
 }
+function showPayModal(plan){
+  var m=document.getElementById('payModal');
+  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥99 永久':'¥14.99/月';
+  document.getElementById('payAmt').textContent=plan==='lifetime'?'¥99':'¥14.99';
+  m.classList.add('show');
+}
+function hidePayModal(){document.getElementById('payModal').classList.remove('show');}
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  INIT                                                       ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ═══════════════ INIT ═══════════════
 function init(){
-	  // === Initialize license system (determines Free vs Pro tier) ===
-	  if(typeof seedstudioLicense!=='undefined'){
-	    seedstudioLicense.configure({
-	      STORE_SLUG: 'seedstudio',
-	      onChange: function(tier, data){
-	        S.tier = tier;
-	        if(tier === 'pro'){
-	          var box = document.getElementById('upgradeBox');
-	          var badge = document.getElementById('proBadge');
-	          if(box) box.style.display = 'none';
-	          if(badge) badge.style.display = 'inline-flex';
-	          if(data && data.plan){
-	            var p = document.getElementById('proPlan');
-	            if(p) p.textContent = data.plan;
-	          }
-	        }
-	        if(typeof draw === 'function') draw();
-	      }
-	    });
-	    seedstudioLicense.init().then(function(tier){
-	      S.tier = tier;
-	      if(tier === 'pro'){
-	        var box = document.getElementById('upgradeBox');
-	        var badge = document.getElementById('proBadge');
-	        if(box) box.style.display = 'none';
-	        if(badge) badge.style.display = 'inline-flex';
-	        var data = seedstudioLicense.getLicenseData();
-	        if(data && data.plan){
-	          var p = document.getElementById('proPlan');
-	          if(p) p.textContent = data.plan;
-	        }
-	      }
-	      if(typeof draw === 'function') draw();
-	    });
-	  }
   loadURL();
 
-  // Build swatches
-  const sw=document.getElementById('swatches');
-  PAL_KEYS.forEach(k=>{
-    const pal=PALETTES[k];
-    const btn=document.createElement('button');
-    btn.dataset.p=k; btn.title=k;
-    btn.style.background=`linear-gradient(135deg, ${pal[0]} 0%, ${pal[Math.floor(pal.length/2)]} 50%, ${pal[pal.length-1]} 100%)`;
-    btn.addEventListener('click',()=>{ S.palette=k; syncAll(); draw(); saveURL(); });
+  var sw=document.getElementById('swatches');
+  PAL_KEYS.forEach(function(k){
+    var pal=PALETTES[k],btn=document.createElement('button');
+    btn.dataset.p=k;btn.title=k;
+    btn.style.background='linear-gradient(135deg, '+pal[0]+' 0%, '+pal[Math.floor(pal.length/2)]+' 50%, '+pal[pal.length-1]+' 100%)';
+    btn.addEventListener('click',function(){S.palette=k;syncAll();draw();saveURL();});
     sw.appendChild(btn);
   });
   syncAll();
+  if(checkStoredLicense()){syncAll();}
 
-  // ═══ BIND ALL EVENT LISTENERS FIRST ═══
-  // (so UI works even if p5/draw fails)
-
-  // Tabs
-  document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
+  // ═══ EVENT LISTENERS ═══
+  document.querySelectorAll('#tabs button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#tabs button').forEach(function(x){x.classList.remove('active');});
     b.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active');});
     document.getElementById('tab-'+b.dataset.tab).classList.add('active');
-  }));
+  });});
+  document.querySelectorAll('#layoutPills button').forEach(function(b){b.addEventListener('click',function(){S.layout=b.value;syncAll();draw();saveURL();});});
+  document.querySelectorAll('#shapePills button').forEach(function(b){b.addEventListener('click',function(){S.shape=b.value;syncAll();draw();saveURL();});});
 
-  // Layout pills
-  document.querySelectorAll('#layoutPills button').forEach(b=>b.addEventListener('click',()=>{
-    S.layout=b.value; syncAll(); draw(); saveURL();
-  }));
-
-  // Shape pills
-  document.querySelectorAll('#shapePills button').forEach(b=>b.addEventListener('click',()=>{
-    S.shape=b.value; syncAll(); draw(); saveURL();
-  }));
-
-  // Sliders with DEBOUNCE for smooth dragging
-  let drawTimer=null;
-  const debouncedDraw=()=>{
-    clearTimeout(drawTimer);
-    // Update UI values immediately (feels responsive)
-    updateUI();
-    // Defer heavy redraw until user stops dragging
-    drawTimer=setTimeout(()=>{ saveURL(); draw(); }, 120);
-  };
-
-  ['density','scale','rotation','noise'].forEach(id=>{
-    const isFloat=id==='scale'||id==='noise';
-    const prop=id;
-    document.getElementById(id).addEventListener('input',function(){
-      S[prop]=isFloat?parseFloat(this.value):parseInt(this.value);
-      debouncedDraw();
-    });
+  var drawTimer=null;
+  function debouncedDraw(){clearTimeout(drawTimer);updateUI();drawTimer=setTimeout(function(){saveURL();draw();},120);}
+  ['density','scale','rotation','noise'].forEach(function(id){
+    var isFloat=id==='scale'||id==='noise',prop=id;
+    document.getElementById(id).addEventListener('input',function(){S[prop]=isFloat?parseFloat(this.value):parseInt(this.value);debouncedDraw();});
   });
+  document.querySelectorAll('#resPills button').forEach(function(b){b.addEventListener('click',function(){S.W=+b.dataset.w;S.H=+b.dataset.h;syncAll();draw();saveURL();});});
 
-  // Resolution pills
-  document.querySelectorAll('#resPills button').forEach(b=>b.addEventListener('click',()=>{
-    S.W=+b.dataset.w; S.H=+b.dataset.h; syncAll(); draw(); saveURL();
-  }));
-
-  // Buttons
   document.getElementById('btnRandom').addEventListener('click',randomize);
   document.getElementById('btnUndo').addEventListener('click',undo);
   document.getElementById('btnExport').addEventListener('click',exportPNG);
-  document.getElementById('btnCopyImg').addEventListener('click',copyImage);
+  document.getElementById('btnCopyImg').addEventListener('click',copyImg);
   document.getElementById('btnCopySeed').addEventListener('click',copyLink);
-  document.getElementById('btnSave').addEventListener('click',saveSettings);
-  document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('fileInput').click());
-  document.getElementById('fileInput').addEventListener('change',e=>{ if(e.target.files[0])loadSettings(e.target.files[0]); e.target.value=''; });
+  document.getElementById('btnSave').addEventListener('click',saveSet);
+  document.getElementById('btnLoad').addEventListener('click',function(){document.getElementById('fileInput').click();});
+  document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadSet(e.target.files[0]);e.target.value='';});
+  document.getElementById('btnUpgrade').addEventListener('click',function(){showPayModal('pro');});
+  document.getElementById('btnLifetime').addEventListener('click',function(){showPayModal('lifetime');});
+  document.getElementById('btnCloseModal').addEventListener('click',hidePayModal);
+  document.getElementById('payModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hidePayModal();});
+  document.getElementById('btnActivate').addEventListener('click',async function(){
+    var key=document.getElementById('licenseInput').value.trim();if(!key){toast('请输入License Key');return;}
+    await activateLicense(key);document.getElementById('licenseInput').value='';hidePayModal();
+  });
 
-  	  // Upgrade buttons -> payment QR modal
-  document.getElementById('btnUpgrade').addEventListener('click',()=>showPayModal('pro'));
-  document.getElementById('btnLifetime').addEventListener('click',()=>showPayModal('lifetime'));
-      p.draw=()=>{};
-    });
-  } catch(e){
-    console.error('p5 init error:', e);
-    document.getElementById('canvas-wrap').innerHTML=`<div style="color:#fff;text-align:center;padding:3rem;"><h2>⚠️ 引擎加载失败</h2><p style="color:#888;margin-top:.5em;">${e.message}</p></div>`;
-  }
+  document.addEventListener('keydown',function(e){
+    if(document.activeElement!==document.body)return;
+    switch(e.key){
+      case'r':if(!e.ctrlKey&&!e.metaKey){e.preventDefault();randomize();}break;
+      case'e':if(!e.ctrlKey&&!e.metaKey){e.preventDefault();exportPNG();}break;
+      case'z':if(e.ctrlKey||e.metaKey){e.preventDefault();undo();}break;
+      case'1':S.layout='vortex';syncAll();draw();saveURL();break;
+      case'2':S.layout='mondrian';syncAll();draw();saveURL();break;
+      case'3':S.layout='galaxy';syncAll();draw();saveURL();break;
+      case'4':S.layout='kaleidoscope';syncAll();draw();saveURL();break;
+      case'5':S.layout='fluid';syncAll();draw();saveURL();break;
+      case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
+    }
+  });
 
-  try { draw(); } catch(e) { console.error('draw error:', e); }
-  try { saveURL(); } catch(e) { console.error('saveURL error:', e); }
+  // Create p5
+  try{
+    if(typeof p5==='undefined')throw new Error('p5.js not loaded');
+    p5inst=new p5(function(p){p.setup=function(){p.createCanvas(S.W,S.H).parent('canvas-wrap');p.noLoop();};p.draw=function(){};});
+  }catch(e){console.error(e);document.getElementById('canvas-wrap').innerHTML='<div style=\"color:#fff;text-align:center;padding:3rem;\"><h2>Engine load failed</h2><p style=\"color:#888;\">'+e.message+'</p></div>';return;}
+  try{draw();}catch(e){console.error(e);}
+  try{saveURL();}catch(e){console.error(e);}
 }
+document.addEventListener('DOMContentLoaded',init);
 
-document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
