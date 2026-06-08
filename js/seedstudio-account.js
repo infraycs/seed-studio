@@ -50,6 +50,7 @@ async function loadUserDB(callback){
 
 // ═══════════════ SEND CODE ═══════════════
 function sendCode(phone, callback){
+  if(!auth){callback('系统初始化中，请稍后再试',null);return;}
   var p=phone.trim().replace(/\s/g,'');
   if(!/^1[3-9]\d{9}$/.test(p)){callback('请输入正确的手机号',null);return;}
   phoneNumber=p;
@@ -62,6 +63,7 @@ function sendCode(phone, callback){
 
 // ═══════════════ LOGIN / REGISTER ═══════════════
 function loginWithCode(code, inviteCode, callback){
+  if(!auth){callback('系统初始化中，请稍后',null);return;}
   if(!phoneNumber){callback('请先输入手机号',null);return;}
   auth.signInWithPhoneCode(phoneNumber,code).then(function(state){
     currentUser=state.user;

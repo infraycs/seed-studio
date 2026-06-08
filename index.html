@@ -914,7 +914,12 @@ function init(){
   }
 
   // ═══ LOGIN MODAL ═══
-  function showLoginModal(){document.getElementById('loginModal').classList.add('show');}
+  function showLoginModal(){
+    document.getElementById('loginModal').classList.add('show');
+    // Ensure CloudBase is initialized
+    var acc=window.SeedStudioAccount;
+    if(acc)acc.init(function(){});
+  }
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
 
   // Tab switching
