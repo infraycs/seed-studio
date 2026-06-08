@@ -952,37 +952,35 @@ function init(){
     };r.readAsText(f);
   });
 
-  // Order → License Key lookup (auto-delivery)
-  document.getElementById('btnLookupOrder').addEventListener('click',async function(){
+  // Order → License Key lookup → Worker API
+  document.getElementById('btnLookupOrder').addEventListener('click',function(){
     var orderId=document.getElementById('orderLookup').value.trim();
     if(!orderId){toast('请输入爱发电订单号');return;}
-    var res=document.getElementById('lookupResult');
+    var res=document.getElementById('lookupResult');var a=window.SeedStudioAccount;
     res.style.display='block';res.style.background='var(--bg)';res.style.color='var(--muted)';res.textContent='查询中...';
-    try{
-      var r=await fetch('js/valid-keys.json');
-      var data=await r.json();
-      if(data.keys[orderId]){
-        var key=data.keys[orderId].key;
-        res.style.background='rgba(78,205,196,0.1)';res.style.color='var(--accent2)';
-        res.innerHTML='🎉 你的 License Key:<br><strong style=\"font-size:1rem;letter-spacing:0.05em;\">'+key+'</strong><br><small style=\"color:var(--muted);\">复制后在上方粘贴激活</small>';
-        document.getElementById('licenseInput2').value=key;
-      } else {
-        res.style.background='rgba(255,107,107,0.1)';res.style.color='var(--accent)';
-        res.textContent='订单未找到。请确认：\n1. 订单号正确\n2. 已付款完成\n3. 等待 5 分钟后重试（系统自动处理中）';
-      }
-    }catch(e){res.textContent='网络错误，请重试';}
+    a.verifyPayment(orderId,function(err,key){
+      if(err){res.style.background='rgba(255,107,107,0.1)';res.style.color='var(--accent)';res.textContent=err;return;}
+      res.style.background='rgba(78,205,196,0.1)';res.style.color='var(--accent2)';
+      res.innerHTML='🎉 License Key:<br><strong style=\"font-size:1rem;letter-spacing:0.05em;\">'+key+'</strong>';
+      document.getElementById('licenseInput2').value=key;
+    });
   });
 
-  // License key activation in modal
+  // License key activation → Worker API
   document.getElementById('btnActivateLicense2').addEventListener('click',function(){
     var key=document.getElementById('licenseInput2').value.trim();
     if(!key){toast('请输入 License Key');return;}
     var a=window.SeedStudioAccount;
-    a.activateLicenseKey(key,function(err,r){
+    if(!a||!a.isLoggedIn){toast('请先登录');return;}
+    // Verify key via Worker, then upgrade
+    a.verifyPayment(key,function(err,validKey){
       if(err){toast('❌ '+err);return;}
-      S.tier='pro';syncAll();draw();updateAccountUI();
-      document.getElementById('licenseInput2').value='';
-      toast('🎉 Pro 已激活！');
+      a.upgradeUser(a.currentUser.email,'pro',function(e2){
+        if(e2){toast('❌ '+e2);return;}
+        S.tier='pro';syncAll();draw();updateAccountUI();
+        document.getElementById('licenseInput2').value='';
+        toast('🎉 Pro 已激活！无限导出');
+      });
     });
   });
 
