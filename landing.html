@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seed Studio — One Seed. Infinite Posters.</title>
+<meta name="description" content="A generative poster art studio. Five algorithmic layout engines, eight color palettes, deterministic seeds — change one number, generate an entirely unique poster.">
+<style>
+/* ═══════════════ THEME ═══════════════ */
+:root {
+  --bg: #08080c;
+  --surface: #111118;
+  --surface2: #1a1a24;
+  --border: #252530;
+  --border-active: #3d3d50;
+  --text: #e8e8ed;
+  --text2: #a0a0b0;
+  --muted: #646478;
+  --accent: #ff6b6b;
+  --accent-glow: rgba(255,107,107,0.25);
+  --accent2: #4ecdc4;
+  --accent2-glow: rgba(78,205,196,0.2);
+  --accent3: #ffe66d;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'SF Mono', 'Consolas', 'Monaco', monospace;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ═══════════════ ANIMATED BACKGROUND ═══════════════ */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-mesh::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255,107,107,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(78,205,196,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 70%, rgba(255,230,109,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 90%, rgba(120,100,220,0.05) 0%, transparent 50%);
+  animation: meshDrift 20s ease-in-out infinite;
+}
+
+@keyframes meshDrift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(2%, -1%) rotate(1deg); }
+  50% { transform: translate(-1%, 2%) rotate(-1deg); }
+  75% { transform: translate(-2%, -2%) rotate(0.5deg); }
+}
+
+/* ═══════════════ HERO GRADIENT ORB ═══════════════ */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  animation: orbFloat 12s ease-in-out infinite;
+}
+
+.gradient-orb.orb-1 {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  top: -80px; left: -100px;
+  animation-delay: 0s;
+}
+
+.gradient-orb.orb-2 {
+  width: 360px; height: 360px;
+  background: radial-gradient(circle, var(--accent2) 0%, transparent 70%);
+  top: 50%; right: -120px;
+  animation-delay: -4s;
+}
+
+.gradient-orb.orb-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #8464e6 0%, transparent 70%);
+  bottom: -60px; left: 30%;
+  animation-delay: -8s;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.08); }
+  66% { transform: translate(-20px, 30px) scale(0.94); }
+}
+
+/* ═══════════════ NAV ═══════════════ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.nav.scrolled {
+  background: rgba(8,8,12,0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 24px rgba(0,0,0,0.4);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.nav-logo {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 18px var(--accent-glow);
+}
+
+.nav-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.nav-links a {
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color var(--transition);
+  position: relative;
+}
+
+.nav-links a:hover { color: var(--text); }
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0; right: 0;
+  height: 1.5px;
+  background: var(--accent);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transition: transform var(--transition);
+}
+
+.nav-links a:hover::after { transform: scaleX(1); }
+
+.nav-cta {
+  padding: 8px 18px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  border: 1px solid var(--accent);
+}
+
+.nav-cta:hover {
+  box-shadow: 0 4px 20px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* Mobile nav toggle */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px;
+  background: none;
+  border: none;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 22px; height: 2px;
+  background: var(--text);
+  border-radius: 1px;
+  transition: var(--transition);
+}
+
+/* ═══════════════ SECTIONS ═══════════════ */
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 100px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+
+.section-sub {
+  font-size: 1.1rem;
+  color: var(--text2);
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+/* ═══════════════ HERO ═══════════════ */
+.hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 32px 80px;
+  overflow: hidden;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(17,17,24,0.6);
+  backdrop-filter: blur(8px);
+  font-size: 0.78rem;
+  color: var(--text2);
+  margin-bottom: 32px;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 8px var(--accent2-glow);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero-title {
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  max-width: 800px;
+  animation: fadeInUp 0.8s ease-out 0.1s both;
+}
+
+.hero-title .gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-desc {
+  font-size: 1.15rem;
+  color: var(--text2);
+  max-width: 520px;
+  margin: 24px 0 40px;
+  line-height: 1.7;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeInUp 0.8s ease-out 0.3s both;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition);
+  border: none;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 28px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-active);
+  background: var(--surface2);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover { color: var(--text); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════ HERO STATS ═══════════════ */
+.hero-stats {
+  display: flex;
+  gap: 48px;
+  margin-top: 64px;
+  padding-top: 48px;
+  border-top: 1px solid var(--border);
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.hero-stat {
+  text-align: center;
+}
+
+.hero-stat-num {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-family: var(--font-mono);
+  color: var(--accent2);
+}
+
+.hero-stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ═══════════════ FEATURES ═══════════════ */
+.features {
+  position: relative;
+  z-index: 1;
+  padding: 100px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-active);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.feature-card:hover::before { opacity: 1; }
+
+.feature-card.card-vortex::before { background: var(--accent); }
+.feature-card.card-mondrian::before { background: var(--accent2); }
+.feature-card.card-galaxy::before { background: #8464e6; }
+.feature-card.card-kaleidoscope::before { background: var(--accent3); }
+.feature-card.card-fluid::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+.feature-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.feature-icon.vortex { background: rgba(255,107,107,0.12); }
+.feature-icon.mondrian { background: rgba(78,205,196,0.12); }
+.feature-icon.galaxy { background: rgba(132,100,230,0.12); }
+.feature-icon.kaleidoscope { background: rgba(255,230,109,0.12); }
+.feature-icon.fluid { background: rgba(255,107,107,0.08); }
+
+.feature-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.feature-desc {
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+.feature-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 14px;
+  letter-spacing: 0.02em;
+}
+
+.tag-algorithm {
+  background: rgba(78,205,196,0.1);
+  color: var(--accent2);
+  border: 1px solid rgba(78,205,196,0.2);
+}
+
+/* ═══════════════ HOW IT WORKS ═══════════════ */
+.how {
+  position: relative;
+  z-index: 1;
+  padding: 100px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.how-header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.steps {
+  display: flex;
+  gap: 32px;
+  counter-reset: step;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  padding: 40px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.3s ease;
+}
+
+.step:hover {
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+}
+
+.step-num {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.step-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.step-desc {
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+/* Connector line between steps */
+.step-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 1.4rem;
+  min-width: 40px;
+}
+
+/* ═══════════════ PRICING ═══════════════ */
+.pricing {
+  position: relative;
+  z-index: 1;
+  padding: 100px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pricing-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.pricing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.pricing-card.featured {
+  border-color: var(--border-active);
+  background: var(--surface2);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+.pricing-card.featured::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius) + 1px);
+  padding: 1px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.pricing-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  margin-bottom: 16px;
+  letter-spacing: 0.03em;
+}
+
+.pricing-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.pricing-desc {
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+
+.pricing-price {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+}
+
+.pricing-price .currency { font-size: 1.5rem; font-weight: 600; }
+.pricing-price .period {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.pricing-features {
+  list-style: none;
+  margin: 28px 0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.pricing-features li {
+  font-size: 0.84rem;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pricing-features li .check {
+  color: var(--accent2);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pricing-features li.disabled {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.pricing-features li.disabled .check {
+  color: var(--muted);
+}
+
+.pricing-btn {
+  display: block;
+  text-align: center;
+  padding: 12px 0;
+  border-radius: 24px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+.pricing-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+}
+
+.pricing-btn.primary:hover {
+  box-shadow: 0 4px 20px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.pricing-btn.outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.pricing-btn.outline:hover {
+  border-color: var(--border-active);
+  background: var(--surface2);
+}
+
+.pricing-note {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 24px;
+}
+
+/* ═══════════════ CTA ═══════════════ */
+.cta {
+  position: relative;
+  z-index: 1;
+  padding: 100px 32px 120px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cta-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 64px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(255,107,107,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 50%, rgba(78,205,196,0.05) 0%, transparent 60%);
+}
+
+.cta-title {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.cta-desc {
+  font-size: 1.05rem;
+  color: var(--text2);
+  max-width: 480px;
+  margin: 0 auto 36px;
+  position: relative;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 36px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), #ff8e8e);
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  position: relative;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+.cta-btn:hover {
+  box-shadow: 0 8px 36px var(--accent-glow);
+  transform: translateY(-3px);
+}
+
+.cta-btn .arrow {
+  transition: transform 0.2s;
+}
+
+.cta-btn:hover .arrow { transform: translateX(4px); }
+
+/* ═══════════════ FOOTER ═══════════════ */
+.footer {
+  position: relative;
+  z-index: 1;
+  padding: 48px 32px;
+  border-top: 1px solid var(--border);
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-logo {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+}
+
+.footer-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 0.8rem;
+  transition: color var(--transition);
+}
+
+.footer-links a:hover { color: var(--text); }
+
+.footer-copy {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 1024px) {
+  .steps {
+    flex-direction: column;
+  }
+
+  .step-connector {
+    transform: rotate(90deg);
+    padding: 4px 0;
+  }
+
+  .hero-stats {
+    gap: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+
+  .nav-toggle { display: flex; }
+
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    gap: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+
+  .hero-stats {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .hero-stat {
+    min-width: 100px;
+  }
+
+  .hero-title {
+    font-size: clamp(2.2rem, 8vw, 3.2rem);
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .cta-title {
+    font-size: 1.8rem;
+  }
+
+  .cta-box {
+    padding: 40px 24px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer-links {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .section { padding: 60px 16px; }
+  .hero { padding: 100px 16px 60px; }
+  .features { padding: 60px 16px; }
+  .how { padding: 60px 16px; }
+  .pricing { padding: 60px 16px; }
+  .cta { padding: 60px 16px 80px; }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ═══════════════ SCROLL REVEAL ═══════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════ SEED DEMO MINI CANVAS ═══════════════ */
+.seed-demo-strip {
+  display: flex;
+  gap: 8px;
+  margin-top: 48px;
+  animation: fadeInUp 0.8s ease-out 0.5s both;
+}
+
+.seed-demo-item {
+  width: 80px; height: 80px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.seed-demo-item:hover {
+  transform: scale(1.08);
+  border-color: var(--border-active);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.seed-demo-item canvas {
+  width: 100%; height: 100%;
+}
+
+/* Inline code styling */
+code {
+  background: var(--surface2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--accent2);
+}
+</style>
+</head>
+<body>
+
+<!-- Background mesh -->
+<div class="bg-mesh"></div>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="nav" id="nav">
+  <a href="#" class="nav-brand">
+    <div class="nav-logo">🌱</div>
+    <span class="nav-title">Seed Studio</span>
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a href="#features">Features</a>
+    <a href="#how">How it Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#cta">Get Started</a>
+  </div>
+  <a href="index.html" class="nav-cta">Launch App &rarr;</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero" id="hero">
+  <!-- Animated gradient orbs -->
+  <div class="gradient-orb orb-1"></div>
+  <div class="gradient-orb orb-2"></div>
+  <div class="gradient-orb orb-3"></div>
+
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Now in Public Beta
+  </div>
+
+  <h1 class="hero-title">
+    One Seed.<br><span class="gradient-text">Infinite Posters.</span>
+  </h1>
+
+  <p class="hero-desc">
+    A generative poster art studio. Five algorithmic layout engines, eight curated color palettes,
+    and a deterministic seed system — change one number, generate an entirely unique poster.
+    Export as high-resolution PNG for print, social, or wallpapers.
+  </p>
+
+  <div class="hero-actions">
+    <a href="index.html" class="btn btn-primary">
+      Try It Free &nbsp;&rarr;
+    </a>
+    <a href="#features" class="btn btn-secondary">
+      See What It Can Do
+    </a>
+  </div>
+
+  <!-- Mini seed demo strip -->
+  <div class="seed-demo-strip" id="seedStrip">
+    <div class="seed-demo-item"><canvas id="miniCanvas0"></canvas></div>
+    <div class="seed-demo-item"><canvas id="miniCanvas1"></canvas></div>
+    <div class="seed-demo-item"><canvas id="miniCanvas2"></canvas></div>
+    <div class="seed-demo-item"><canvas id="miniCanvas3"></canvas></div>
+    <div class="seed-demo-item"><canvas id="miniCanvas4"></canvas></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num">5</div>
+      <div class="hero-stat-label">Layout Engines</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">8</div>
+      <div class="hero-stat-label">Color Palettes</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">2<sup style="font-size:0.5em">32</sup></div>
+      <div class="hero-stat-label">Unique Seeds</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">4K</div>
+      <div class="hero-stat-label">Export Res (Pro)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="features" id="features">
+  <div class="features-header reveal">
+    <div class="section-label">Layout Engines</div>
+    <h2 class="section-title">Five algorithmic styles.<br>Infinite creative possibilities.</h2>
+    <p class="section-sub">
+      Each layout engine uses a unique procedural algorithm driven by a deterministic seed.
+      Same seed = same poster, every time. Change the seed = an entirely new composition.
+    </p>
+  </div>
+
+  <div class="features-grid">
+    <!-- Vortex -->
+    <div class="feature-card card-vortex reveal">
+      <div class="feature-icon vortex">🌀</div>
+      <h3 class="feature-title">Vortex</h3>
+      <p class="feature-desc">
+        Logarithmic spirals with particle trails create hypnotic vortex patterns.
+        Particles spiral outward from the center, leaving elegant trails that evoke
+        cosmic whirlpools and mathematical beauty.
+      </p>
+      <span class="feature-tag tag-algorithm">Logarithmic Spiral + Particle Trail</span>
+    </div>
+
+    <!-- Mondrian -->
+    <div class="feature-card card-mondrian reveal">
+      <div class="feature-icon mondrian">🔷</div>
+      <h3 class="feature-title">Mondrian</h3>
+      <p class="feature-desc">
+        Recursive rectangle subdivision inspired by De Stijl art movement.
+        Clean geometric compositions with bold color blocks, perfect for
+        gallery walls, posters, and modern graphic design.
+      </p>
+      <span class="feature-tag tag-algorithm">Recursive Subdivision</span>
+    </div>
+
+    <!-- Galaxy -->
+    <div class="feature-card card-galaxy reveal">
+      <div class="feature-icon galaxy">🌌</div>
+      <h3 class="feature-title">Galaxy</h3>
+      <p class="feature-desc">
+        Gravity simulation with particle orbits generates nebula-like compositions.
+        Thousands of particles interact through simulated gravity, forming spiral arms,
+        star clusters, and cosmic dust clouds.
+      </p>
+      <span class="feature-tag tag-algorithm">Gravity Simulation + Orbits</span>
+    </div>
+
+    <!-- Kaleidoscope -->
+    <div class="feature-card card-kaleidoscope reveal">
+      <div class="feature-icon kaleidoscope">💠</div>
+      <h3 class="feature-title">Kaleidoscope</h3>
+      <p class="feature-desc">
+        N-fold rotational symmetry creates mesmerizing mandala-like patterns.
+        Shapes are mirrored and rotated around the center, producing sacred
+        geometry and intricate decorative compositions.
+      </p>
+      <span class="feature-tag tag-algorithm">Rotational N-fold Symmetry</span>
+    </div>
+
+    <!-- Fluid -->
+    <div class="feature-card card-fluid reveal">
+      <div class="feature-icon fluid">🌊</div>
+      <h3 class="feature-title">Fluid</h3>
+      <p class="feature-desc">
+        Multi-layer Perlin noise flow fields produce organic, smoke-like compositions.
+        Particles follow smooth vector fields, creating atmospheric gradients that
+        evoke liquid, smoke, and wind patterns.
+      </p>
+      <span class="feature-tag tag-algorithm">Perlin Noise Flow Field</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ HOW IT WORKS ═══════════════ -->
+<section class="how" id="how">
+  <div class="how-header reveal">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Three steps to your perfect poster.</h2>
+    <p class="section-sub">
+      No design skills needed. The algorithm does the heavy lifting —
+      you just explore, refine, and export.
+    </p>
+  </div>
+
+  <div class="steps">
+    <div class="step reveal">
+      <div class="step-num">1</div>
+      <h3 class="step-title">Choose Your Style</h3>
+      <p class="step-desc">
+        Pick from five generative layout engines: Vortex, Mondrian, Galaxy, Kaleidoscope, or Fluid.
+        Each produces fundamentally different compositions using unique algorithms.
+      </p>
+    </div>
+
+    <div class="step-connector">&#8594;</div>
+
+    <div class="step reveal">
+      <div class="step-num">2</div>
+      <h3 class="step-title">Tune Your Parameters</h3>
+      <p class="step-desc">
+        Adjust density, scale, rotation, noise, shape type, and color palette with real-time preview.
+        Hit Randomize or change the seed value — every number generates a unique poster.
+      </p>
+    </div>
+
+    <div class="step-connector">&#8594;</div>
+
+    <div class="step reveal">
+      <div class="step-num">3</div>
+      <h3 class="step-title">Export & Share</h3>
+      <p class="step-desc">
+        Download your poster as a high-resolution PNG. Share a URL link so others can
+        see your exact creation. Pro users get 4K exports with no watermark and full commercial rights.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PRICING ═══════════════ -->
+<section class="pricing" id="pricing">
+  <div class="pricing-header reveal">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Start free. Go Pro when you are ready.</h2>
+    <p class="section-sub">
+      All layout engines and palettes are available in every plan.
+      Upgrade for watermark-free 4K exports, commercial use, and priority support.
+    </p>
+  </div>
+
+  <div class="pricing-grid">
+    <!-- Free -->
+    <div class="pricing-card reveal">
+      <h3 class="pricing-name">Free</h3>
+      <p class="pricing-desc">Perfect for exploring and experimenting.</p>
+      <div class="pricing-price">
+        <span class="currency">$</span>0
+      </div>
+      <ul class="pricing-features">
+        <li><span class="check">&#10003;</span> 5 generative layouts</li>
+        <li><span class="check">&#10003;</span> 8 color palettes</li>
+        <li><span class="check">&#10003;</span> 5 shape types</li>
+        <li><span class="check">&#10003;</span> Seed-based reproducibility</li>
+        <li><span class="check">&#10003;</span> URL sharing</li>
+        <li class="disabled"><span class="check">&#10007;</span> Watermark-free export</li>
+        <li class="disabled"><span class="check">&#10007;</span> 4K resolution</li>
+        <li class="disabled"><span class="check">&#10007;</span> Commercial license</li>
+      </ul>
+      <a href="index.html" class="pricing-btn outline">Get Started Free</a>
+    </div>
+
+    <!-- Pro -->
+    <div class="pricing-card featured reveal">
+      <div class="pricing-badge">Most Popular</div>
+      <h3 class="pricing-name">Pro</h3>
+      <p class="pricing-desc">For designers, creators, and studios.</p>
+      <div class="pricing-price">
+        <span class="currency">$</span>14.99<span class="period">/month</span>
+      </div>
+      <ul class="pricing-features">
+        <li><span class="check">&#10003;</span> Everything in Free</li>
+        <li><span class="check">&#10003;</span> No watermark</li>
+        <li><span class="check">&#10003;</span> 4K PNG export</li>
+        <li><span class="check">&#10003;</span> Commercial license</li>
+        <li><span class="check">&#10003;</span> 6 adjustable parameters</li>
+        <li><span class="check">&#10003;</span> API access</li>
+        <li><span class="check">&#10003;</span> Priority support</li>
+        <li><span class="check">&#10003;</span> Cancel anytime</li>
+      </ul>
+      <a href="index.html" class="pricing-btn primary">Subscribe Pro</a>
+      <p style="font-size:0.66rem;color:var(--muted);margin-top:10px;text-align:center;">
+        Secured by LemonSqueezy &middot; Alipay / WeChat Pay
+      </p>
+    </div>
+
+    <!-- Lifetime -->
+    <div class="pricing-card reveal">
+      <h3 class="pricing-name">Lifetime</h3>
+      <p class="pricing-desc">One payment. Forever access.</p>
+      <div class="pricing-price">
+        <span class="currency">$</span>99<span class="period"> one-time</span>
+      </div>
+      <ul class="pricing-features">
+        <li><span class="check">&#10003;</span> Everything in Pro</li>
+        <li><span class="check">&#10003;</span> Lifetime updates</li>
+        <li><span class="check">&#10003;</span> No recurring fees</li>
+        <li><span class="check">&#10003;</span> Early access to new engines</li>
+        <li><span class="check">&#10003;</span> Commercial license</li>
+        <li><span class="check">&#10003;</span> API access</li>
+        <li><span class="check">&#10003;</span> Priority support</li>
+        <li><span class="check">&#10003;</span> Best value</li>
+      </ul>
+      <a href="index.html" class="pricing-btn primary">Get Lifetime</a>
+      <p style="font-size:0.66rem;color:var(--muted);margin-top:10px;text-align:center;">
+        Secured by LemonSqueezy &middot; Alipay / WeChat Pay
+      </p>
+    </div>
+  </div>
+
+  <p class="pricing-note">
+    All prices in USD. VAT may apply based on your location. &middot;
+    <a href="terms.md" style="color:var(--accent2);">Terms</a> &middot;
+    <a href="privacy.md" style="color:var(--accent2);">Privacy</a>
+  </p>
+</section>
+
+<!-- ═══════════════ CTA ═══════════════ -->
+<section class="cta" id="cta">
+  <div class="cta-box reveal">
+    <div class="section-label">Ready to Create?</div>
+    <h2 class="cta-title">Your first poster is<br>one click away.</h2>
+    <p class="cta-desc">
+      Open Seed Studio in your browser — no sign-up, no install, no waiting.
+      Start generating unique poster art instantly.
+    </p>
+    <a href="index.html" class="cta-btn">
+      Launch Seed Studio
+      <span class="arrow">&rarr;</span>
+    </a>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="footer">
+  <div class="footer-brand">
+    <div class="footer-logo">🌱</div>
+    <span class="footer-name">Seed Studio</span>
+  </div>
+  <div class="footer-links">
+    <a href="index.html">Launch App</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="privacy.md">Privacy</a>
+    <a href="terms.md">Terms</a>
+  </div>
+  <div class="footer-copy">
+    &copy; 2026 Seed Studio. All rights reserved.
+  </div>
+</footer>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+// ─── Nav scroll effect ──────────────────────────────
+(function() {
+  const nav = document.getElementById('nav');
+  let ticking = false;
+
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      requestAnimationFrame(function() {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+})();
+
+// ─── Mobile nav toggle ──────────────────────────────
+(function() {
+  const toggle = document.getElementById('navToggle');
+  const links = document.getElementById('navLinks');
+
+  toggle.addEventListener('click', function() {
+    links.classList.toggle('open');
+  });
+
+  // Close on link click
+  links.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      links.classList.remove('open');
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener('click', function(e) {
+    if (!toggle.contains(e.target) && !links.contains(e.target)) {
+      links.classList.remove('open');
+    }
+  });
+})();
+
+// ─── Scroll reveal animation ─────────────────────────
+(function() {
+  const reveals = document.querySelectorAll('.reveal');
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  reveals.forEach(function(el) {
+    observer.observe(el);
+  });
+})();
+
+// ─── Hero mini-canvas generative art ──────────────────
+(function() {
+  // Mulberry32 PRNG — deterministic random
+  function mulberry32(a) {
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function drawMiniPoster(canvas, seed, style) {
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+    var h = canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    var rng = mulberry32(seed);
+
+    // Background
+    ctx.fillStyle = '#0d0d14';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw based on style
+    var cx = w / 2, cy = h / 2;
+    var count = 40;
+    var palette = [
+      ['#ff6b6b', '#ff8e8e', '#ffb3b3'],
+      ['#4ecdc4', '#6ed8d1', '#8ee3de'],
+      ['#ffe66d', '#ffed8a', '#fff4a7'],
+      ['#8464e6', '#9d84ee', '#b5a4f6'],
+      ['#ff6b6b', '#4ecdc4', '#ffe66d', '#8464e6'],
+    ];
+
+    for (var i = 0; i < count; i++) {
+      var t = i / count;
+      var colors = palette[style % palette.length];
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = 0.7 + rng() * 0.3;
+
+      var radius = t * Math.max(w, h) * 0.7;
+      var angle = t * Math.PI * 6 + rng() * 0.5;
+      var x = cx + Math.cos(angle) * radius * (0.3 + rng() * 0.7);
+      var y = cy + Math.sin(angle) * radius * (0.3 + rng() * 0.7);
+      var size = 4 + rng() * 16;
+
+      ctx.beginPath();
+
+      switch (style) {
+        case 0: // vortex - circles
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          break;
+        case 1: // mondrian - rects
+          ctx.fillRect(x - size/2, y - size/2, size * 1.5, size);
+          break;
+        case 2: // galaxy - small dots
+          ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+          break;
+        case 3: // kaleidoscope - symmetric
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          // Mirror
+          ctx.arc(w - x, y, size, 0, Math.PI * 2);
+          ctx.arc(x, h - y, size, 0, Math.PI * 2);
+          ctx.arc(w - x, h - y, size, 0, Math.PI * 2);
+          break;
+        case 4: // fluid - flowing shapes
+          ctx.ellipse(x, y, size * 1.3, size * 0.5, rng() * Math.PI, 0, Math.PI * 2);
+          break;
+      }
+
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Subtle vignette
+    var grad = ctx.createRadialGradient(cx, cy, Math.max(w, h) * 0.25, cx, cy, Math.max(w, h) * 0.75);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  var seeds = [42, 137, 256, 8192, 777];
+  var styles = [0, 1, 2, 3, 4]; // vortex, mondrian, galaxy, kaleidoscope, fluid
+
+  for (var i = 0; i < 5; i++) {
+    var canvas = document.getElementById('miniCanvas' + i);
+    if (canvas) {
+      drawMiniPoster(canvas, seeds[i], styles[i]);
+    }
+  }
+})();
+
+// ─── Smooth scroll for anchor links ───────────────────
+(function() {
+  document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+      e.preventDefault();
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
