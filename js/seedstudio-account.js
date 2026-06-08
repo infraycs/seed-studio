@@ -42,6 +42,7 @@ function init(callback){
 
 // ═══════════════ AUTH ═══════════════
 function register(email, password, inviteCode, callback){
+  if(typeof Bmob==='undefined'){callback('Bmob SDK 未加载，请刷新页面重试',null);return;}
   var user=new Bmob.User();
   user.set('username', email);
   user.set('password', password);
@@ -68,6 +69,7 @@ function register(email, password, inviteCode, callback){
 }
 
 function login(email, password, callback){
+  if(typeof Bmob==='undefined'){callback('Bmob SDK 未加载，请刷新页面重试',null);return;}
   Bmob.User.login(email, password).then(function(u){
     currentUser=u;
     referralCode=u.get('referralCode')||'';

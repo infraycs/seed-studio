@@ -497,7 +497,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
   <!-- Bmob SDK (account system, bmob.cn, ¥0/month) -->
   <script src="https://cdn.bmob.cn/bmob-3.0.0.min.js"
-    onerror="this.onerror=null;this.src='https://libs.bmob.cn/bmob-3.0.0.min.js';">
+    onerror="this.onerror=null;this.src='https://libs.bmob.cn/bmob-3.0.0.min.js';this.onerror=function(){document.getElementById('creditDisplay').textContent='⚠️ 账户服务不可用';console.error('Bmob SDK failed to load');};">
   </script>
   <script src="js/seedstudio-account.js"></script>
 <script src="p5.min.js"
