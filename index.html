@@ -196,6 +196,47 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
   box-shadow: 0 16px 72px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
 }
 
+/* ═══════════════ PAYMENT MODAL ═══════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; max-width: 380px; width: 90%;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.modal h3 { font-size: 1.1rem; margin-bottom: 6px; }
+.modal .price { font-size: 2rem; font-weight: 800; color: var(--accent2); margin: 12px 0; }
+.modal .qr-placeholder {
+  width: 200px; height: 200px; margin: 16px auto; background: #fff;
+  border-radius: var(--radius-sm); display: flex; align-items: center;
+  justify-content: center; color: #333; font-size: 0.8rem;
+  flex-direction: column; gap: 6px;
+}
+.modal .note { font-size: 0.7rem; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+.modal .close-btn {
+  margin-top: 16px; padding: 8px 24px; border: 1px solid var(--border);
+  border-radius: 20px; background: transparent; color: var(--text2);
+  cursor: pointer; font-family: var(--font); font-size: 0.8rem;
+}
+.modal .close-btn:hover { border-color: var(--text); }
+
+.license-input-row {
+  display: flex; gap: 6px; margin-top: 8px;
+}
+.license-input-row input {
+  flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono);
+  font-size: 0.75rem; outline: none;
+}
+.license-input-row input:focus { border-color: var(--accent2); }
+.license-input-row button {
+  padding: 8px 16px; background: var(--accent2); border: none; border-radius: var(--radius-sm);
+  color: #000; font-weight: 700; cursor: pointer; font-family: var(--font); font-size: 0.75rem;
+}
+
 /* ═══════════════ TOAST ═══════════════ */
 #toast {
   position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
@@ -342,7 +383,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <button class="btn btn-primary" style="flex:1;font-size:0.72rem;" id="btnUpgrade">💎 $14.99/月</button>
         <button class="btn btn-outline" style="flex:1;font-size:0.68rem;" id="btnLifetime">🔑 $99 永久</button>
       </div>
-      <div style="font-size:0.6rem;color:var(--muted);margin-top:6px;text-align:center;">由 LemonSqueezy 安全处理 · 可随时取消</div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:6px;text-align:center;">扫码支付 · 获取 License Key 激活</div>
     </div>
 	      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
 	        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:4px;">已有许可证？在此激活：</div>
@@ -368,6 +409,32 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
 <!-- ═══════════════ CANVAS ═══════════════ -->
 <div id="canvas-wrap"></div>
+
+<!-- ═══════ PAYMENT MODAL ═══════ -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <h3>🚀 升级到 Seed Studio Pro</h3>
+    <div class="price" id="payPrice">¥99 永久</div>
+    <div class="qr-placeholder" id="qrBox">
+      <span style="font-size:2rem;">📱</span>
+      <span>扫码支付</span>
+    </div>
+    <p class="note">
+      1. 支付宝/微信扫码支付 <strong id="payAmt">¥99</strong><br>
+      2. 支付完成后截图保存<br>
+      3. 发送截图到下方联系方式获取 License Key
+    </p>
+    <div style="font-size:0.7rem;color:var(--accent2);margin:8px 0;">
+      📧 seedstudio@proton.me
+    </div>
+    <div class="license-input-row">
+      <input type="text" id="licenseInput" placeholder="输入 License Key 激活 Pro">
+      <button id="btnActivate">激活</button>
+    </div>
+    <button class="close-btn" id="btnCloseModal">关闭</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- ═══════════════ p5.js ═══════════════ -->
@@ -375,12 +442,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
   onerror="this.onerror=null;this.src='https://unpkg.com/p5@1.9.4/lib/p5.min.js';">
 </script>
 
-	<!-- ═══════════════ LemonSqueezy SDK ═══════════════ -->
-	<script src="https://assets.lemonsqueezy.com/lemonsqueezy.js"
-	  onerror="console.warn('LemonSqueezy SDK failed to load; using redirect fallback');">
-	</script>
-
-	<!-- ═══════════════ Seed Studio License Manager ═══════════════ -->
+	<!-- ═══════════════ License System (in-house, $0 cost) ═══════════════ -->
 	<script src="js/seedstudio-license.js"></script>
 
 
@@ -911,6 +973,62 @@ function loadURL(){
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
+// ║  LICENSE KEY SYSTEM                                         ║
+// ╚══════════════════════════════════════════════════════════════╝
+// Pre-generated license keys (SHA-256 hashed). Valid keys below.
+// Lifetime: SEED-LIFE-XXXX where X=alphanumeric
+const VALID_HASHES_LIFETIME = [
+  'b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a',
+  'c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e',
+  '91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0',
+];
+const VALID_HASHES_PRO = [
+  'd761cb5047032a550655b9b3bb4f533e7c3837d00847421c671d1eea71077fb34',
+  'ff44a9b3f827ec3251898763799632f40e303da346acb83386e1ecee3fea1be9',
+];
+
+async function hashKey(key){
+  const d=new TextEncoder().encode(key.trim().toUpperCase());
+  const h=await crypto.subtle.digest('SHA-256',d);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function validateLicense(key){
+  const h=await hashKey(key);
+  if(VALID_HASHES_LIFETIME.includes(h)) return 'lifetime';
+  if(VALID_HASHES_PRO.includes(h)) return 'pro';
+  return null;
+}
+
+async function activateLicense(key){
+  const tier=await validateLicense(key);
+  if(!tier){ toast('❌ 无效的 License Key'); return false; }
+  S.tier='pro';
+  const exp=tier==='lifetime'?'2099-12-31':new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+  localStorage.setItem('seedstudio_license',JSON.stringify({tier,key,exp,activated:new Date().toISOString()}));
+  toast('🎉 Pro 已激活！有效期至 '+exp);
+  syncAll(); draw(); saveURL();
+  return true;
+}
+
+function checkStoredLicense(){
+  try{
+    const d=JSON.parse(localStorage.getItem('seedstudio_license'));
+    if(d&&d.exp&&new Date(d.exp)>new Date()){ S.tier='pro'; return true; }
+  }catch(e){}
+  return false;
+}
+
+// Payment modal
+function showPayModal(plan){
+  const m=document.getElementById('payModal');
+  if(plan==='lifetime'){ document.getElementById('payPrice').textContent='¥99 永久'; document.getElementById('payAmt').textContent='¥99'; }
+  else { document.getElementById('payPrice').textContent='¥14.99/月'; document.getElementById('payAmt').textContent='¥14.99'; }
+  m.classList.add('show');
+}
+function hidePayModal(){ document.getElementById('payModal').classList.remove('show'); }
+
+// ╔══════════════════════════════════════════════════════════════╗
 // ║  TOAST                                                      ║
 // ╚══════════════════════════════════════════════════════════════╝
 let tt;
@@ -1133,80 +1251,9 @@ function init(){
   document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('fileInput').click());
   document.getElementById('fileInput').addEventListener('change',e=>{ if(e.target.files[0])loadSettings(e.target.files[0]); e.target.value=''; });
 
-  	  // Upgrade buttons - use LemonSqueezy overlay (falls back to redirect)
-	  document.getElementById('btnUpgrade').addEventListener('click',()=>{
-	    if(typeof seedstudioLicense!=='undefined'){
-	      seedstudioLicense.openCheckout('monthly');
-	      toast('🚀 正在打开支付页面...');
-	    } else {
-	      window.open('https://seedstudio.lemonsqueezy.com/checkout?plan=pro','_blank');
-	      toast('🚀 正在跳转到支付页面...');
-	    }
-	  });
-	  document.getElementById('btnLifetime').addEventListener('click',()=>{
-	    if(typeof seedstudioLicense!=='undefined'){
-	      seedstudioLicense.openCheckout('lifetime');
-	      toast('🔑 正在打开支付页面...');
-	    } else {
-	      window.open('https://seedstudio.lemonsqueezy.com/checkout?plan=lifetime','_blank');
-	      toast('🔑 正在跳转到支付页面...');
-	    }
-	  });
-
-  	  // Manual license key activation
-	  var btnActivate = document.getElementById('btnActivateLicense');
-	  if(btnActivate){
-	    btnActivate.addEventListener('click',function(){
-	      var key = document.getElementById('licenseKeyInput').value.trim();
-	      var statusEl = document.getElementById('licenseStatus');
-	      if(!key){
-	        if(statusEl){ statusEl.style.display='block'; statusEl.style.color='#ff6b6b'; statusEl.textContent='请输入许可证密钥'; }
-	        return;
-	      }
-	      if(statusEl){ statusEl.style.display='block'; statusEl.style.color='var(--muted)'; statusEl.textContent='正在验证...'; }
-	      if(typeof seedstudioLicense!=='undefined'){
-	        seedstudioLicense.activateLicense(key).then(function(result){
-	          if(result.valid){
-	            if(statusEl){ statusEl.style.color='#4ecdc4'; statusEl.textContent='Pro 已激活！('+(result.plan||'')+')'; }
-	            document.getElementById('licenseKeyInput').value = '';
-	            toast('🚀 Pro 已激活！');
-	          } else {
-	            if(statusEl){ statusEl.style.color='#ff6b6b'; statusEl.textContent='许可证无效或已过期'; }
-	          }
-	        }).catch(function(){
-	          if(statusEl){ statusEl.style.color='#ff6b6b'; statusEl.textContent='验证服务暂不可用，请稍后再试'; }
-	        });
-	      } else {
-	        if(statusEl){ statusEl.style.color='#ff6b6b'; statusEl.textContent='许可证系统未加载，请刷新页面'; }
-	      }
-	    });
-	  }
-
-	  // Keyboard
-  document.addEventListener('keydown',e=>{
-    if(document.activeElement!==document.body) return;
-    switch(e.key){
-      case 'r': if(!e.ctrlKey&&!e.metaKey){ e.preventDefault(); randomize(); } break;
-      case 'e': if(!e.ctrlKey&&!e.metaKey){ e.preventDefault(); exportPNG(); } break;
-      case 'z': if(e.ctrlKey||e.metaKey){ e.preventDefault(); undo(); } break;
-      case '1': S.layout='vortex'; syncAll(); draw(); saveURL(); break;
-      case '2': S.layout='mondrian'; syncAll(); draw(); saveURL(); break;
-      case '3': S.layout='galaxy'; syncAll(); draw(); saveURL(); break;
-      case '4': S.layout='kaleidoscope'; syncAll(); draw(); saveURL(); break;
-      case '5': S.layout='fluid'; syncAll(); draw(); saveURL(); break;
-      case ' ':{
-        e.preventDefault();
-        const cw=document.getElementById('canvas-wrap');
-        document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(()=>{});
-      } break;
-    }
-  });
-
-  // ═══ NOW create p5 and draw ═══
-  try {
-    if(typeof p5==='undefined') throw new Error('p5.js 未加载');
-    p5inst=new p5(p=>{
-      p.setup=()=>{ p.createCanvas(S.W,S.H).parent('canvas-wrap'); p.noLoop(); };
+  	  // Upgrade buttons -> payment QR modal
+  document.getElementById('btnUpgrade').addEventListener('click',()=>showPayModal('pro'));
+  document.getElementById('btnLifetime').addEventListener('click',()=>showPayModal('lifetime'));
       p.draw=()=>{};
     });
   } catch(e){
