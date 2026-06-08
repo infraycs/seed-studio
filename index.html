@@ -437,27 +437,41 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <!-- ═══════ LOGIN MODAL ═══════ -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal login-modal">
-    <h3 style="margin-bottom:16px;font-size:0.95rem;">🔐 登录 / 注册</h3>
-    <div class="field"><label>邮箱</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
-    <div class="field"><label>密码</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
-    <div class="field"><div class="hint">🎁 首次输入自动注册 · 得 3 免费积分 · <a href="#" id="clearData" style="color:var(--accent);">清除旧数据</a></div></div>
-    <div class="field" id="loginError" style="display:none"></div>
-    <button type="button" class="submit-btn" id="btnLogin">登录 / 注册</button>
-    <div style="display:flex;gap:8px;margin-top:10px;">
+    <div class="tab-row">
+      <button class="active" data-tab="login">🔐 登录</button>
+      <button data-tab="register">✨ 注册</button>
+    </div>
+    <!-- Login -->
+    <div id="loginForm2" style="display:block;">
+      <div class="field"><label>邮箱</label><input type="email" id="loginEmail2" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="loginPassword2" placeholder="••••••••"></div>
+      <div class="field" id="loginError2" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnLogin2">登录</button>
+    </div>
+    <!-- Register -->
+    <div id="registerForm2" style="display:none;">
+      <div class="field"><label>邮箱</label><input type="email" id="regEmail2" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="regPassword2" placeholder="至少6位"></div>
+      <div class="field"><label>邀请码 <span style="color:var(--muted);font-weight:400;">选填</span></label><input type="text" id="regInvite2" placeholder="好友邀请码"></div>
+      <div class="field"><div class="hint">🎁 注册即得 3 免费积分 · 👥 邀请好友双方 +2</div></div>
+      <div class="field" id="regError2" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnRegister2">注册</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
       <button type="button" class="btn btn-outline" id="btnBackup" style="font-size:0.65rem;padding:6px;">💾 备份</button>
       <button type="button" class="btn btn-outline" id="btnRestore" style="font-size:0.65rem;padding:6px;">📂 恢复</button>
       <input type="file" id="restoreFile" style="display:none" accept=".txt">
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
-      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">💳 付款后在此查询 License Key</div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px;">
+      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">💳 付款后查询 License Key</div>
       <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input type="text" id="orderLookup" placeholder="输入爱发电订单号" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
+        <input type="text" id="orderLookup" placeholder="爱发电订单号" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
         <button type="button" id="btnLookupOrder" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.72rem;">查询</button>
       </div>
       <div id="lookupResult" style="font-size:0.7rem;padding:8px;border-radius:var(--radius-sm);display:none;"></div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:4px;">
-      <input type="text" id="licenseInput2" placeholder="或直接输入 License Key" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <input type="text" id="licenseInput2" placeholder="License Key" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
       <button type="button" id="btnActivateLicense2" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.72rem;">激活</button>
     </div>
   </div>
@@ -902,31 +916,51 @@ function init(){
   // ═══ LOGIN MODAL ═══
   function showLoginModal(){document.getElementById('loginModal').classList.add('show');var a=window.SeedStudioAccount;if(a)a.init(function(){});}
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
-  function showLoginErr(m){var e=document.getElementById('loginError');e.textContent=m;e.style.display='block';e.className='field error';}
-  document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
-  document.getElementById('clearData').addEventListener('click',function(e){e.preventDefault();localStorage.removeItem('ss_user');localStorage.removeItem('seedstudio_invite');toast('✅ 旧数据已清除，请重新注册');});
+  var loginTab='login';
 
-  document.getElementById('btnLogin').addEventListener('click',function(){
-    var email=document.getElementById('loginEmail').value.trim();
-    var pw=document.getElementById('loginPassword').value;
-    if(!email||!pw){showLoginErr('请填写邮箱和密码');return;}
-    if(pw.length<6){showLoginErr('密码至少6位');return;}
-    var a=window.SeedStudioAccount;if(!a){showLoginErr('系统加载中');return;}
-    var invite=localStorage.getItem('seedstudio_invite')||'';
-    var btn=document.getElementById('btnLogin');btn.textContent='...';btn.disabled=true;
+  // Tab switching
+  document.querySelectorAll('#loginModal .tab-row button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      loginTab=btn.dataset.tab;
+      document.querySelectorAll('#loginModal .tab-row button').forEach(function(b){b.classList.toggle('active',b===btn);});
+      document.getElementById('loginForm2').style.display=btn.dataset.tab==='login'?'block':'none';
+      document.getElementById('registerForm2').style.display=btn.dataset.tab==='register'?'block':'none';
+      document.getElementById('loginError2').style.display='none';
+      document.getElementById('regError2').style.display='none';
+    });
+  });
+  document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
+
+  function showErr(id,m){var e=document.getElementById(id);e.textContent=m;e.style.display='block';e.className='field error';}
+
+  // Login
+  document.getElementById('btnLogin2').addEventListener('click',function(){
+    var email=document.getElementById('loginEmail2').value.trim();
+    var pw=document.getElementById('loginPassword2').value;
+    if(!email||!pw){showErr('loginError2','请填写邮箱和密码');return;}
+    var a=window.SeedStudioAccount;if(!a){showErr('loginError2','系统加载中');return;}
+    var btn=document.getElementById('btnLogin2');btn.textContent='...';btn.disabled=true;
     a.login(email,pw,function(err,user){
-      if(err&&(err.indexOf('不存在')>-1||err.indexOf('not found')>-1||err.indexOf('user not found')>-1)){
-        a.register(email,pw,invite,function(e2,u2){
-          btn.textContent='登录 / 注册';btn.disabled=false;
-          if(e2){showLoginErr(e2);return;}
-          localStorage.removeItem('seedstudio_invite');
-          hideLoginModal();updateAccountUI();toast('🎉 注册成功！获得 3 免费积分');
-        });
-      }else{
-        btn.textContent='登录 / 注册';btn.disabled=false;
-        if(err){showLoginErr(err);return;}
-        hideLoginModal();updateAccountUI();toast('✅ 登录成功！积分: '+a.creditBalance);
-      }
+      btn.textContent='登录';btn.disabled=false;
+      if(err){showErr('loginError2',err);return;}
+      hideLoginModal();updateAccountUI();toast('✅ 登录成功！积分: '+a.creditBalance);
+    });
+  });
+
+  // Register
+  document.getElementById('btnRegister2').addEventListener('click',function(){
+    var email=document.getElementById('regEmail2').value.trim();
+    var pw=document.getElementById('regPassword2').value;
+    var invite=localStorage.getItem('seedstudio_invite')||document.getElementById('regInvite2').value.trim();
+    if(!email||!pw){showErr('regError2','请填写邮箱和密码');return;}
+    if(pw.length<6){showErr('regError2','密码至少6位');return;}
+    var a=window.SeedStudioAccount;if(!a){showErr('regError2','系统加载中');return;}
+    var btn=document.getElementById('btnRegister2');btn.textContent='注册中...';btn.disabled=true;
+    a.register(email,pw,invite,function(err,user){
+      btn.textContent='注册';btn.disabled=false;
+      if(err){showErr('regError2',err);return;}
+      localStorage.removeItem('seedstudio_invite');
+      hideLoginModal();updateAccountUI();toast('🎉 注册成功！获得 3 免费积分');
     });
   });
 
