@@ -915,7 +915,7 @@ function init(){
     var invite=localStorage.getItem('seedstudio_invite')||'';
     var btn=document.getElementById('btnLogin');btn.textContent='...';btn.disabled=true;
     a.login(email,pw,function(err,user){
-      if(err&&err.indexOf('不存在')>-1){
+      if(err&&(err.indexOf('不存在')>-1||err.indexOf('not found')>-1||err.indexOf('user not found')>-1)){
         a.register(email,pw,invite,function(e2,u2){
           btn.textContent='登录 / 注册';btn.disabled=false;
           if(e2){showLoginErr(e2);return;}
