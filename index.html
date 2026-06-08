@@ -448,7 +448,18 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       <button type="button" class="btn btn-outline" id="btnRestore" style="font-size:0.65rem;padding:6px;">📂 恢复</button>
       <input type="file" id="restoreFile" style="display:none" accept=".txt">
     </div>
-    <div class="field"><label>License Key</label><div style="display:flex;gap:6px;"><input type="text" id="licenseInput2" placeholder="SEED-XXXX-XXXX" style="flex:1;"><button type="button" id="btnActivateLicense2" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活Pro</button></div></div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">💳 付款后在此查询 License Key</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input type="text" id="orderLookup" placeholder="输入爱发电订单号" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
+        <button type="button" id="btnLookupOrder" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.72rem;">查询</button>
+      </div>
+      <div id="lookupResult" style="font-size:0.7rem;padding:8px;border-radius:var(--radius-sm);display:none;"></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:4px;">
+      <input type="text" id="licenseInput2" placeholder="或直接输入 License Key" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
+      <button type="button" id="btnActivateLicense2" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.72rem;">激活</button>
+    </div>
   </div>
 </div>
 
@@ -463,17 +474,18 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       <span style="font-size:0.7rem;color:#888;">支付宝 / 微信支付</span>
     </div>
     <p class="note">
-      1. 点击下方按钮前往爱发电付款<br>
-      2. 付款后记下订单号<br>
-      3. 回到本站粘贴订单号自动激活
+      1. 前往爱发电完成付款<br>
+      2. 记下订单号<br>
+      3. 登录后 → License Key 栏 → <strong>输入订单号查询</strong><br>
+      4. 系统自动返回你的专属 Key → 激活
     </p>
     <div style="margin-top:6px;">
       <button class="btn btn-primary" id="btnGoPay" style="width:100%;">前往爱发电付款 💰</button>
     </div>
-    <div class="license-input-row" style="margin-top:8px;">
-      <input type="text" id="orderIdInput" placeholder="输入爱发电订单号自动激活">
-      <button id="btnVerifyOrder" style="background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;padding:8px 16px;font-size:0.75rem;">验证</button>
-    </div>
+    <p class="note" style="margin-top:8px;color:var(--accent2);">
+      🤖 全自动：付款后 5 分钟内 Key 自动生成<br>
+      在登录弹窗输入订单号即可领取
+    </p>
     <div class="license-input-row">
       <input type="text" id="licenseInput" placeholder="输入 License Key 激活 Pro">
       <button id="btnActivate">激活</button>
@@ -954,6 +966,27 @@ function init(){
         hideLoginModal();updateAccountUI();toast('✅ 数据已恢复！积分: '+a.creditBalance);
       });
     };r.readAsText(f);
+  });
+
+  // Order → License Key lookup (auto-delivery)
+  document.getElementById('btnLookupOrder').addEventListener('click',async function(){
+    var orderId=document.getElementById('orderLookup').value.trim();
+    if(!orderId){toast('请输入爱发电订单号');return;}
+    var res=document.getElementById('lookupResult');
+    res.style.display='block';res.style.background='var(--bg)';res.style.color='var(--muted)';res.textContent='查询中...';
+    try{
+      var r=await fetch('js/valid-keys.json');
+      var data=await r.json();
+      if(data.keys[orderId]){
+        var key=data.keys[orderId].key;
+        res.style.background='rgba(78,205,196,0.1)';res.style.color='var(--accent2)';
+        res.innerHTML='🎉 你的 License Key:<br><strong style=\"font-size:1rem;letter-spacing:0.05em;\">'+key+'</strong><br><small style=\"color:var(--muted);\">复制后在上方粘贴激活</small>';
+        document.getElementById('licenseInput2').value=key;
+      } else {
+        res.style.background='rgba(255,107,107,0.1)';res.style.color='var(--accent)';
+        res.textContent='订单未找到。请确认：\n1. 订单号正确\n2. 已付款完成\n3. 等待 5 分钟后重试（系统自动处理中）';
+      }
+    }catch(e){res.textContent='网络错误，请重试';}
   });
 
   // License key activation in modal
