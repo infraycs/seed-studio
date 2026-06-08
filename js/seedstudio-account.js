@@ -5,7 +5,7 @@
 (function(global){
 'use strict';
 
-var API = 'https://backend.seedstudio.top';
+var API = 'https://odd-sky-4c45.402741165.workers.dev';
 var token = localStorage.getItem('ss_token') || '';
 
 var currentUser = null, creditBalance = 0, membershipTier = 'free', referralCode = '';
