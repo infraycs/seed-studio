@@ -23,12 +23,12 @@ async function init(callback){
   try{
     var raw=localStorage.getItem('ss_user');
     if(!raw){callback(null,null);return;}
-    var p=raw.split('.');if(p.length!==2){callback(null,null);return;}
+    var p=raw.split('.');if(p.length!==2){localStorage.removeItem('ss_user');callback(null,null);return;}
     var v=(await hmacSign(p[0]))===p[1];
-    if(!v){localStorage.removeItem('ss_user');callback('系统更新，请重新注册',null);return;}
+    if(!v){localStorage.removeItem('ss_user');callback(null,null);return;}
     currentUser=JSON.parse(p[0]);creditBalance=currentUser.cr||0;membershipTier=currentUser.ti||'free';referralCode=currentUser.rc||'';
     callback(null,currentUser);
-  }catch(e){callback(null,null);}
+  }catch(e){localStorage.removeItem('ss_user');callback(null,null);}
 }
 
 async function save(){if(!currentUser)return;currentUser.up=Date.now();var d=JSON.stringify(currentUser),s=await hmacSign(d);localStorage.setItem('ss_user',d+'.'+s);}

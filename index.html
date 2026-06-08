@@ -440,7 +440,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
     <h3 style="margin-bottom:16px;font-size:0.95rem;">🔐 登录 / 注册</h3>
     <div class="field"><label>邮箱</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
     <div class="field"><label>密码</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
-    <div class="field"><div class="hint">🎁 首次输入自动注册 · 得 3 免费积分</div></div>
+    <div class="field"><div class="hint">🎁 首次输入自动注册 · 得 3 免费积分 · <a href="#" id="clearData" style="color:var(--accent);">清除旧数据</a></div></div>
     <div class="field" id="loginError" style="display:none"></div>
     <button type="button" class="submit-btn" id="btnLogin">登录 / 注册</button>
     <div style="display:flex;gap:8px;margin-top:10px;">
@@ -904,6 +904,7 @@ function init(){
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
   function showLoginErr(m){var e=document.getElementById('loginError');e.textContent=m;e.style.display='block';e.className='field error';}
   document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
+  document.getElementById('clearData').addEventListener('click',function(e){e.preventDefault();localStorage.removeItem('ss_user');localStorage.removeItem('seedstudio_invite');toast('✅ 旧数据已清除，请重新注册');});
 
   document.getElementById('btnLogin').addEventListener('click',function(){
     var email=document.getElementById('loginEmail').value.trim();
