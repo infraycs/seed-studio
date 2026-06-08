@@ -1,165 +1,157 @@
 /**
- * SeedStudio Account System v4
- * Pure localStorage + HMAC signature (zero external dependency)
- * Works even when all APIs are blocked.
+ * SeedStudio Account System v5
+ * Tencent CloudBase (cloudbase.net) — auth, credits, referral
+ * Cost: ¥0/month (free tier: 50K API/day, 2GB DB)
  */
 (function(global){
 'use strict';
 
-// Secret HMAC key (embedded in code, not user-accessible without devtools)
-var SECRET = 'seedstudio_v4_hmac_' + '7e66f9f9';
+var ENV_ID = 'seedstudio-d6gcgy3nwa8b4e1ca';
+var app = null;
+var db = null;
+var auth = null;
 
-// ═══════════════ HMAC ═══════════════
-async function hmacSign(data){
-  var enc=new TextEncoder();
-  var key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(data));
-  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-}
-
-async function hmacVerify(data,signature){
-  var expected=await hmacSign(data);
-  return expected===signature;
-}
-
-// ═══════════════ STATE ═══════════════
-var currentUser=null;
-var creditBalance=0;
-var membershipTier='free';
-var referralCode='';
+var currentUser = null;
+var creditBalance = 0;
+var membershipTier = 'free';
+var referralCode = '';
 
 // ═══════════════ INIT ═══════════════
-async function init(callback){
-  try{
-    var raw=localStorage.getItem('seedstudio_user');
-    if(!raw){callback(null,null);return;}
-    var parts=raw.split('.');
-    if(parts.length!==2){callback(null,null);return;}
-    var data=parts[0],sig=parts[1];
-    var valid=await hmacVerify(data,sig);
-    if(!valid){localStorage.removeItem('seedstudio_user');callback(null,null);return;}
-
-    currentUser=JSON.parse(data);
-    creditBalance=currentUser.credits||0;
-    membershipTier=currentUser.tier||'free';
-    referralCode=currentUser.referralCode||'';
-    callback(null,currentUser);
-  }catch(e){
-    callback(null,null);
+function init(callback){
+  if(typeof tcb==='undefined'){
+    callback('CloudBase SDK 未加载，请刷新',null);
+    return;
   }
+  app=tcb.init({env:ENV_ID});
+  auth=app.auth({persistence:'local'});
+  db=app.database();
+
+  // Check existing login
+  auth.getLoginState().then(function(state){
+    if(state){
+      currentUser=state.user;
+      loadUserData(callback);
+    } else {
+      // Anonymous sign-in for initial state
+      callback(null,null);
+    }
+  }).catch(function(){
+    callback(null,null);
+  });
 }
 
-// ═══════════════ SAVE ═══════════════
-async function saveUser(){
-  if(!currentUser)return;
-  currentUser.updatedAt=Date.now();
-  var data=JSON.stringify(currentUser);
-  var sig=await hmacSign(data);
-  localStorage.setItem('seedstudio_user',data+'.'+sig);
+function loadUserData(callback){
+  if(!currentUser){callback('Not logged in',null);return;}
+  db.collection('users').where({uid:currentUser.uid}).get().then(function(res){
+    if(res.data&&res.data.length>0){
+      var u=res.data[0];
+      creditBalance=u.credits||0;
+      membershipTier=u.tier||'free';
+      referralCode=u.referralCode||'';
+      callback(null,{credits:creditBalance,tier:membershipTier});
+    } else {
+      // First login — create user doc
+      var newUser={
+        uid:currentUser.uid,
+        email:currentUser.email||'',
+        credits:3,
+        tier:'free',
+        referralCode:'S'+Math.random().toString(36).substring(2,8).toUpperCase(),
+        createdAt:new Date().toISOString(),
+      };
+      db.collection('users').add(newUser).then(function(){
+        creditBalance=3;
+        membershipTier='free';
+        referralCode=newUser.referralCode;
+        callback(null,{credits:3,tier:'free'});
+      });
+    }
+  }).catch(function(e){callback(e.message,null);});
 }
 
 // ═══════════════ AUTH ═══════════════
-async function register(email, password, inviteCode, callback){
-  // Check if email already exists
-  var existing=localStorage.getItem('seedstudio_user_'+email);
-  if(existing){callback('该邮箱已注册，请直接登录',null);return;}
-
-  var user={
-    id: 'u'+Date.now().toString(36),
-    email: email,
-    passwordHash: await simpleHash(password+SECRET),
-    credits: 3, // 🎁 3 free credits
-    tier: 'free',
-    referralCode: 'S'+Math.random().toString(36).substring(2,8).toUpperCase(),
-    invitedBy: inviteCode||'',
-    createdAt: new Date().toISOString(),
-  };
-
-  currentUser=user;
-  creditBalance=3;
-  membershipTier='free';
-  referralCode=user.referralCode;
-
-  await saveUser();
-  localStorage.setItem('seedstudio_user_'+email, user.id);
-
-  // Process referral
-  if(inviteCode){
-    await processReferral(inviteCode);
-  }
-
-  callback(null,user);
+function register(email, password, inviteCode, callback){
+  auth.signUpWithEmailAndPassword(email,password).then(function(){
+    return auth.signInWithEmailAndPassword(email,password);
+  }).then(function(state){
+    currentUser=state.user;
+    loadUserData(function(err,data){
+      if(err){callback(err,null);return;}
+      if(inviteCode)processReferral(inviteCode,function(){});
+      callback(null,currentUser);
+    });
+  }).catch(function(e){
+    // If user exists, try login
+    if(e.code==='USER_ALREADY_EXISTS'||e.message.indexOf('exists')>-1){
+      login(email,password,callback);
+    } else {
+      callback('注册失败: '+(e.message||e.code),null);
+    }
+  });
 }
 
-async function login(email, password, callback){
-  var pHash=await simpleHash(password+SECRET);
-  var raw=localStorage.getItem('seedstudio_user');
-
-  if(!raw){callback('账号不存在，请先注册',null);return;}
-  var parts=raw.split('.');
-  if(parts.length!==2){callback('数据损坏，请重新注册',null);return;}
-
-  var data=parts[0],sig=parts[1];
-  var valid=await hmacVerify(data,sig);
-  if(!valid){callback('数据被篡改，请重新注册',null);return;}
-
-  var user=JSON.parse(data);
-  // Check if this is the user's email by checking stored hash
-  var storedId=localStorage.getItem('seedstudio_user_'+email);
-  if(!storedId||storedId!==user.id){callback('账号不存在，请先注册',null);return;}
-  if(user.passwordHash!==pHash){callback('密码错误',null);return;}
-
-  currentUser=user;
-  creditBalance=user.credits||0;
-  membershipTier=user.tier||'free';
-  referralCode=user.referralCode||'';
-  callback(null,user);
+function login(email, password, callback){
+  auth.signInWithEmailAndPassword(email,password).then(function(state){
+    currentUser=state.user;
+    loadUserData(function(err,data){
+      if(err)callback(err,null);
+      else callback(null,currentUser);
+    });
+  }).catch(function(e){
+    callback('登录失败: '+(e.message||e.code),null);
+  });
 }
 
 function logout(callback){
-  currentUser=null;
-  creditBalance=0;
-  membershipTier='free';
-  referralCode='';
-  callback(null);
+  auth.signOut().then(function(){
+    currentUser=null;
+    creditBalance=0;
+    membershipTier='free';
+    referralCode='';
+    callback(null);
+  }).catch(function(e){callback(e.message);});
 }
 
 // ═══════════════ CREDITS ═══════════════
 function refreshCredits(callback){
-  if(!currentUser){callback('Not logged in',null);return;}
-  creditBalance=currentUser.credits||0;
-  membershipTier=currentUser.tier||'free';
-  callback(null,{credits:creditBalance,tier:membershipTier});
+  loadUserData(callback);
 }
 
-async function deductCredit(amount, reason, callback){
+function deductCredit(amount, reason, callback){
   if(!currentUser){callback('请先登录',null);return;}
   amount=amount||1;
   if(membershipTier==='pro'||membershipTier==='lifetime'){
     callback(null,{deducted:0,remaining:creditBalance,unlimited:true});
     return;
   }
-  if(creditBalance<amount){callback('积分不足！请充值或邀请好友',null);return;}
+  if(creditBalance<amount){callback('积分不足！请充值或邀请好友获取积分',null);return;}
 
-  currentUser.credits=(currentUser.credits||0)-amount;
-  creditBalance=currentUser.credits;
-  await saveUser();
-  callback(null,{deducted:amount,remaining:creditBalance});
+  var nb=creditBalance-amount;
+  db.collection('users').where({uid:currentUser.uid}).update({credits:nb}).then(function(){
+    creditBalance=nb;
+    callback(null,{deducted:amount,remaining:creditBalance});
+  }).catch(function(e){
+    callback('扣款失败: '+(e.message||e.code),null);
+  });
 }
 
 // ═══════════════ REFERRAL ═══════════════
-async function processReferral(inviteCode){
-  var raw=localStorage.getItem('seedstudio_user');
-  if(!raw)return;
-  var data=JSON.parse(raw.split('.')[0]);
-  if(data.referralCode===inviteCode){
-    data.credits=(data.credits||0)+2;
-    currentUser.credits=(currentUser.credits||0)+2;
-    creditBalance=currentUser.credits;
-    var sig=await hmacSign(JSON.stringify(data));
-    localStorage.setItem('seedstudio_user',JSON.stringify(data)+'.'+sig);
-    await saveUser();
-  }
+function processReferral(inviteCode, callback){
+  db.collection('users').where({referralCode:inviteCode}).get().then(function(res){
+    if(res.data&&res.data.length>0){
+      var inviter=res.data[0];
+      // +2 to inviter
+      db.collection('users').doc(inviter._id).update({credits:(inviter.credits||0)+2});
+      // +2 to current user
+      var nb=(creditBalance||0)+2;
+      db.collection('users').where({uid:currentUser.uid}).update({credits:nb}).then(function(){
+        creditBalance=nb;
+      });
+      callback(null,{message:'🎁 双方各得 +2 积分'});
+    } else {
+      callback(null,{message:'邀请码已记录'});
+    }
+  }).catch(function(e){callback(e.message,null);});
 }
 
 function getReferralLink(){
@@ -167,22 +159,20 @@ function getReferralLink(){
   return'https://www.seedstudio.top/?ref='+referralCode;
 }
 
-// ═══════════════ HELPERS ═══════════════
-async function simpleHash(str){
-  var d=new TextEncoder().encode(str);
-  var h=await crypto.subtle.digest('SHA-256',d);
-  return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-}
-
 // ═══════════════ PRO UPGRADE ═══════════════
-function upgradeToPro(tier){
+function upgradeToPro(tier,orderId){
   if(!currentUser)return;
   tier=tier||'pro';
-  currentUser.tier=tier;
-  currentUser.credits=999;
-  membershipTier=tier;
-  creditBalance=999;
-  saveUser();
+  db.collection('users').where({uid:currentUser.uid}).update({
+    tier:tier,
+    credits:999,
+    orderId:orderId||'',
+    upgradedAt:new Date().toISOString(),
+  }).then(function(){
+    membershipTier=tier;
+    creditBalance=999;
+    if(typeof S!=='undefined')S.tier='pro';
+  });
 }
 
 // ═══════════════ EXPORT ═══════════════
