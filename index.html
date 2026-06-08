@@ -422,17 +422,21 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
     <h3>🚀 升级到 Seed Studio Pro</h3>
     <div class="price" id="payPrice">¥99 永久</div>
     <div class="qr-placeholder" id="qrBox" style="background:#111;flex-direction:column;gap:10px;padding:20px;">
-      <span style="font-size:1.5rem;">📧</span>
-      <span style="font-weight:700;font-size:0.9rem;">获取 License Key</span>
-      <span style="font-size:0.7rem;color:#888;">发送邮件注明「Seed Studio Pro」</span>
+      <span style="font-size:1.5rem;">💳</span>
+      <span style="font-weight:700;font-size:0.9rem;">爱发电付款</span>
+      <span style="font-size:0.7rem;color:#888;">支付宝 / 微信支付</span>
     </div>
     <p class="note">
-      1. 发送邮件到下方地址<br>
-      2. 注明你想购买的套餐（月费/永久）<br>
-      3. 我会回复付款方式和 License Key
+      1. 点击下方按钮前往爱发电付款<br>
+      2. 付款后记下订单号<br>
+      3. 回到本站粘贴订单号自动激活
     </p>
-    <div style="font-size:0.75rem;color:var(--accent2);margin:8px 0;font-weight:600;">
-      📧 seedstudio@proton.me
+    <div style="margin-top:6px;">
+      <button class="btn btn-primary" id="btnGoPay" style="width:100%;">前往爱发电付款 💰</button>
+    </div>
+    <div class="license-input-row" style="margin-top:8px;">
+      <input type="text" id="orderIdInput" placeholder="输入爱发电订单号自动激活">
+      <button id="btnVerifyOrder" style="background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;padding:8px 16px;font-size:0.75rem;">验证</button>
     </div>
     <div class="license-input-row">
       <input type="text" id="licenseInput" placeholder="输入 License Key 激活 Pro">
@@ -744,8 +748,8 @@ function checkStoredLicense(){
 }
 function showPayModal(plan){
   var m=document.getElementById('payModal');
-  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥99 永久':'¥14.99/月';
-  document.getElementById('payAmt').textContent=plan==='lifetime'?'¥99':'¥14.99';
+  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥199 永久':'¥19.99/月';
+  document.getElementById('payPrice').dataset.plan=plan;
   m.classList.add('show');
 }
 function hidePayModal(){document.getElementById('payModal').classList.remove('show');}
@@ -791,13 +795,28 @@ function init(){
   document.getElementById('btnSave').addEventListener('click',saveSet);
   document.getElementById('btnLoad').addEventListener('click',function(){document.getElementById('fileInput').click();});
   document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadSet(e.target.files[0]);e.target.value='';});
-  document.getElementById('btnUpgrade').addEventListener('click',function(){showPayModal('pro');});
+  document.getElementById('btnUpgrade').addEventListener('click',function(){showPayModal('monthly');});
   document.getElementById('btnLifetime').addEventListener('click',function(){showPayModal('lifetime');});
   document.getElementById('btnCloseModal').addEventListener('click',hidePayModal);
   document.getElementById('payModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hidePayModal();});
-  document.getElementById('btnActivate').addEventListener('click',async function(){
-    var key=document.getElementById('licenseInput').value.trim();if(!key){toast('请输入License Key');return;}
-    await activateLicense(key);document.getElementById('licenseInput').value='';hidePayModal();
+  document.getElementById('btnGoPay').addEventListener('click',function(){
+    var plan=document.getElementById('payPrice').dataset.plan||'lifetime';
+    window.open('https://afdian.net/@Seed%20Studio','_blank');
+    toast('💳 请在爱发电完成付款后，回到这里粘贴订单号激活');
+  });
+  document.getElementById('btnVerifyOrder').addEventListener('click',async function(){
+    var orderId=document.getElementById('orderIdInput').value.trim();
+    if(!orderId){toast('请粘贴爱发电订单号');return;}
+    var acc=window.SeedStudioAccount;
+    if(!acc||!acc.isLoggedIn){toast('请先登录账号');return;}
+    // Store order for manual verification
+    var user=acc.currentUser;
+    user.set('pendingOrder',orderId);
+    user.save().then(function(){
+      toast('✅ 订单已提交！我们核实后会自动升级您的账号');
+      document.getElementById('orderIdInput').value='';
+      hidePayModal();
+    }).catch(function(e){toast('提交失败: '+e.message);});
   });
 
   document.addEventListener('keydown',function(e){

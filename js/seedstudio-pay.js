@@ -7,12 +7,12 @@
 (function(global){
 'use strict';
 
-var AFDIAN_USER_ID = 'YOUR_AFDIAN_USER_ID'; // 爱发电创作者 ID
+var AFDIAN_USER_ID = 'Seed Studio'; // 爱发电创作者 ID
 var AFDIAN_TOKEN = 'YOUR_AFDIAN_API_TOKEN'; // 爱发电 API Token
 
 // ═══════════════ UPGRADE FLOW ═══════════════
 function openUpgrade(plan){
-  var url='https://afdian.net/@'+AFDIAN_USER_ID;
+  var url='https://afdian.net/@'+encodeURIComponent(AFDIAN_USER_ID);
   if(plan==='lifetime') url+='?plan=lifetime';
   else if(plan==='monthly') url+='?plan=monthly';
   window.open(url,'_blank');
