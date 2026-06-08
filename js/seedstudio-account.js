@@ -1,98 +1,119 @@
 /**
- * SeedStudio Account System v3
- * Bmob REST API (no SDK needed, zero CDN dependency)
- * Cost: ¥0/month
+ * SeedStudio Account System v4
+ * Pure localStorage + HMAC signature (zero external dependency)
+ * Works even when all APIs are blocked.
  */
-
 (function(global){
 'use strict';
 
-var CONFIG = {
-  APP_ID: '7e66f9f90a2cb2c3447c5241b59c0673',
-  REST_KEY: 'b936e837095771edc3798f296164d7d3',
-  API_URL: 'https://api.bmob.cn/1',
-};
+// Secret HMAC key (embedded in code, not user-accessible without devtools)
+var SECRET = 'seedstudio_v4_hmac_' + '7e66f9f9';
 
-var currentUser = null;
-var creditBalance = 0;
-var membershipTier = 'free';
-var referralCode = '';
-
-// ═══════════════ HELPERS ═══════════════
-function api(method, path, data){
-  return fetch(CONFIG.API_URL+path, {
-    method: method,
-    headers: {
-      'X-Bmob-Application-Id': CONFIG.APP_ID,
-      'X-Bmob-REST-API-Key': CONFIG.REST_KEY,
-      'Content-Type': 'application/json',
-      'X-Bmob-Session-Token': (currentUser||{})._sessionToken||'',
-    },
-    body: data ? JSON.stringify(data) : undefined,
-  }).then(function(r){ return r.json(); });
+// ═══════════════ HMAC ═══════════════
+async function hmacSign(data){
+  var enc=new TextEncoder();
+  var key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
 }
 
+async function hmacVerify(data,signature){
+  var expected=await hmacSign(data);
+  return expected===signature;
+}
+
+// ═══════════════ STATE ═══════════════
+var currentUser=null;
+var creditBalance=0;
+var membershipTier='free';
+var referralCode='';
+
 // ═══════════════ INIT ═══════════════
-function init(callback){
-  var tok=localStorage.getItem('seedstudio_session');
-  if(!tok){callback(null,null);return;}
-  // Validate session
-  api('GET','/users/me')
-    .then(function(u){
-      if(u.error){callback(null,null);return;}
-      currentUser=u;
-      creditBalance=u.credits||0;
-      membershipTier=u.tier||'free';
-      referralCode=u.referralCode||'';
-      currentUser._sessionToken=tok;
-      callback(null,u);
-    })
-    .catch(function(){callback(null,null);});
+async function init(callback){
+  try{
+    var raw=localStorage.getItem('seedstudio_user');
+    if(!raw){callback(null,null);return;}
+    var parts=raw.split('.');
+    if(parts.length!==2){callback(null,null);return;}
+    var data=parts[0],sig=parts[1];
+    var valid=await hmacVerify(data,sig);
+    if(!valid){localStorage.removeItem('seedstudio_user');callback(null,null);return;}
+
+    currentUser=JSON.parse(data);
+    creditBalance=currentUser.credits||0;
+    membershipTier=currentUser.tier||'free';
+    referralCode=currentUser.referralCode||'';
+    callback(null,currentUser);
+  }catch(e){
+    callback(null,null);
+  }
+}
+
+// ═══════════════ SAVE ═══════════════
+async function saveUser(){
+  if(!currentUser)return;
+  currentUser.updatedAt=Date.now();
+  var data=JSON.stringify(currentUser);
+  var sig=await hmacSign(data);
+  localStorage.setItem('seedstudio_user',data+'.'+sig);
 }
 
 // ═══════════════ AUTH ═══════════════
-function register(email, password, inviteCode, callback){
-  var data={
-    username: email,
-    password: password,
+async function register(email, password, inviteCode, callback){
+  // Check if email already exists
+  var existing=localStorage.getItem('seedstudio_user_'+email);
+  if(existing){callback('该邮箱已注册，请直接登录',null);return;}
+
+  var user={
+    id: 'u'+Date.now().toString(36),
     email: email,
-    credits: 3,
+    passwordHash: await simpleHash(password+SECRET),
+    credits: 3, // 🎁 3 free credits
     tier: 'free',
     referralCode: 'S'+Math.random().toString(36).substring(2,8).toUpperCase(),
     invitedBy: inviteCode||'',
+    createdAt: new Date().toISOString(),
   };
-  api('POST','/users',data).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    // Auto-login
-    api('GET','/login?username='+encodeURIComponent(email)+'&password='+encodeURIComponent(password))
-      .then(function(u){
-        if(u.error){callback(u.error,null);return;}
-        currentUser=u;
-        creditBalance=u.credits||3;
-        membershipTier=u.tier||'free';
-        referralCode=data.referralCode;
-        currentUser._sessionToken=u.sessionToken;
-        localStorage.setItem('seedstudio_session',u.sessionToken||'');
-        // Process referral
-        if(inviteCode) processReferralREST(inviteCode,function(){});
-        callback(null,u);
-      });
-  }).catch(function(e){callback('网络错误: '+e.message,null);});
+
+  currentUser=user;
+  creditBalance=3;
+  membershipTier='free';
+  referralCode=user.referralCode;
+
+  await saveUser();
+  localStorage.setItem('seedstudio_user_'+email, user.id);
+
+  // Process referral
+  if(inviteCode){
+    await processReferral(inviteCode);
+  }
+
+  callback(null,user);
 }
 
-function login(email, password, callback){
-  api('GET','/login?username='+encodeURIComponent(email)+'&password='+encodeURIComponent(password))
-    .then(function(u){
-      if(u.error){callback(u.error,null);return;}
-      currentUser=u;
-      creditBalance=u.credits||0;
-      membershipTier=u.tier||'free';
-      referralCode=u.referralCode||'';
-      currentUser._sessionToken=u.sessionToken;
-      localStorage.setItem('seedstudio_session',u.sessionToken||'');
-      callback(null,u);
-    })
-    .catch(function(e){callback('网络错误: '+e.message,null);});
+async function login(email, password, callback){
+  var pHash=await simpleHash(password+SECRET);
+  var raw=localStorage.getItem('seedstudio_user');
+
+  if(!raw){callback('账号不存在，请先注册',null);return;}
+  var parts=raw.split('.');
+  if(parts.length!==2){callback('数据损坏，请重新注册',null);return;}
+
+  var data=parts[0],sig=parts[1];
+  var valid=await hmacVerify(data,sig);
+  if(!valid){callback('数据被篡改，请重新注册',null);return;}
+
+  var user=JSON.parse(data);
+  // Check if this is the user's email by checking stored hash
+  var storedId=localStorage.getItem('seedstudio_user_'+email);
+  if(!storedId||storedId!==user.id){callback('账号不存在，请先注册',null);return;}
+  if(user.passwordHash!==pHash){callback('密码错误',null);return;}
+
+  currentUser=user;
+  creditBalance=user.credits||0;
+  membershipTier=user.tier||'free';
+  referralCode=user.referralCode||'';
+  callback(null,user);
 }
 
 function logout(callback){
@@ -100,75 +121,45 @@ function logout(callback){
   creditBalance=0;
   membershipTier='free';
   referralCode='';
-  localStorage.removeItem('seedstudio_session');
   callback(null);
 }
 
 // ═══════════════ CREDITS ═══════════════
 function refreshCredits(callback){
   if(!currentUser){callback('Not logged in',null);return;}
-  api('GET','/users/'+currentUser.objectId).then(function(u){
-    if(u.error){callback(u.error,null);return;}
-    creditBalance=u.credits||0;
-    membershipTier=u.tier||'free';
-    callback(null,{credits:creditBalance,tier:membershipTier});
-  }).catch(function(e){callback(e.message,null);});
+  creditBalance=currentUser.credits||0;
+  membershipTier=currentUser.tier||'free';
+  callback(null,{credits:creditBalance,tier:membershipTier});
 }
 
-function deductCredit(amount, reason, callback){
+async function deductCredit(amount, reason, callback){
   if(!currentUser){callback('请先登录',null);return;}
   amount=amount||1;
   if(membershipTier==='pro'||membershipTier==='lifetime'){
     callback(null,{deducted:0,remaining:creditBalance,unlimited:true});
     return;
   }
-  if(creditBalance<amount){callback('积分不足！',null);return;}
+  if(creditBalance<amount){callback('积分不足！请充值或邀请好友',null);return;}
 
-  // Try cloud function first
-  api('POST','/functions/deductCredit',{userId:currentUser.objectId,amount:amount,reason:reason||'export'})
-    .then(function(r){
-      if(r.result&&!r.result.error){
-        creditBalance=r.result.remaining;
-        callback(null,{deducted:amount,remaining:creditBalance});
-      } else {
-        // Fallback: client-side update
-        var nb=creditBalance-amount;
-        api('PUT','/users/'+currentUser.objectId,{credits:nb}).then(function(){
-          creditBalance=nb;
-          callback(null,{deducted:amount,remaining:creditBalance});
-        }).catch(function(e){callback(e.message,null);});
-      }
-    }).catch(function(e){
-      // Fallback client-side
-      var nb=creditBalance-amount;
-      api('PUT','/users/'+currentUser.objectId,{credits:nb}).then(function(){
-        creditBalance=nb;
-        callback(null,{deducted:amount,remaining:creditBalance});
-      }).catch(function(e2){callback(e2.message,null);});
-    });
+  currentUser.credits=(currentUser.credits||0)-amount;
+  creditBalance=currentUser.credits;
+  await saveUser();
+  callback(null,{deducted:amount,remaining:creditBalance});
 }
 
 // ═══════════════ REFERRAL ═══════════════
-function processReferralREST(inviteCode, callback){
-  // Find inviter by referralCode
-  var query=encodeURIComponent(JSON.stringify({referralCode:inviteCode}));
-  api('GET','/users?where='+query).then(function(r){
-    if(r.results&&r.results.length>0){
-      var inviter=r.results[0];
-      // Give +2 to inviter
-      api('PUT','/users/'+inviter.objectId,{credits:(inviter.credits||0)+2});
-      // Give +2 to new user
-      if(currentUser&&currentUser.objectId){
-        var nb=(creditBalance||0)+2;
-        api('PUT','/users/'+currentUser.objectId,{credits:nb}).then(function(){
-          creditBalance=nb;
-        });
-      }
-      callback(null,{message:'🎁 双方各得 +2 积分'});
-    } else {
-      callback('邀请码无效',null);
-    }
-  }).catch(function(e){callback(e.message,null);});
+async function processReferral(inviteCode){
+  var raw=localStorage.getItem('seedstudio_user');
+  if(!raw)return;
+  var data=JSON.parse(raw.split('.')[0]);
+  if(data.referralCode===inviteCode){
+    data.credits=(data.credits||0)+2;
+    currentUser.credits=(currentUser.credits||0)+2;
+    creditBalance=currentUser.credits;
+    var sig=await hmacSign(JSON.stringify(data));
+    localStorage.setItem('seedstudio_user',JSON.stringify(data)+'.'+sig);
+    await saveUser();
+  }
 }
 
 function getReferralLink(){
@@ -176,18 +167,29 @@ function getReferralLink(){
   return'https://www.seedstudio.top/?ref='+referralCode;
 }
 
-function checkURLInvite(){
-  var p=new URLSearchParams(window.location.search);
-  var ref=p.get('ref');
-  if(ref)localStorage.setItem('seedstudio_invite',ref);
-  return ref||localStorage.getItem('seedstudio_invite')||'';
+// ═══════════════ HELPERS ═══════════════
+async function simpleHash(str){
+  var d=new TextEncoder().encode(str);
+  var h=await crypto.subtle.digest('SHA-256',d);
+  return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+
+// ═══════════════ PRO UPGRADE ═══════════════
+function upgradeToPro(tier){
+  if(!currentUser)return;
+  tier=tier||'pro';
+  currentUser.tier=tier;
+  currentUser.credits=999;
+  membershipTier=tier;
+  creditBalance=999;
+  saveUser();
 }
 
 // ═══════════════ EXPORT ═══════════════
 global.SeedStudioAccount={
   init:init, register:register, login:login, logout:logout,
   refreshCredits:refreshCredits, deductCredit:deductCredit,
-  getReferralLink:getReferralLink, checkURLInvite:checkURLInvite,
+  getReferralLink:getReferralLink, upgradeToPro:upgradeToPro,
   get currentUser(){return currentUser;},
   get creditBalance(){return creditBalance;},
   get membershipTier(){return membershipTier;},

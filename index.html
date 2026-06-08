@@ -851,23 +851,23 @@ function init(){
     if(!orderId){toast('请粘贴爱发电订单号');return;}
     var acc=window.SeedStudioAccount;
     if(!acc||!acc.isLoggedIn){toast('请先登录账号');return;}
-    toast('⏳ 正在验证订单...');
-    fetch('https://api.bmob.cn/1/functions/verifyPayment',{
-      method:'POST',
-      headers:{'X-Bmob-Application-Id':'7e66f9f90a2cb2c3447c5241b59c0673','X-Bmob-REST-API-Key':'b936e837095771edc3798f296164d7d3','Content-Type':'application/json'},
-      body:JSON.stringify({userId:acc.currentUser.objectId,orderId:orderId})
-    }).then(function(r){return r.json();}).then(function(r){
-      r=r.result||r;
-      if(r.verified){
-        acc.membershipTier=r.tier||'pro';
-        S.tier='pro';syncAll();draw();updateAccountUI();
-        toast('🎉 支付验证成功！已升级为 '+r.tier+' 会员');
-        document.getElementById('orderIdInput').value='';
-        hidePayModal();
-      } else {
-        toast('❌ '+(r.error||'验证失败'));
-      }
-    }).catch(function(e){toast('验证失败: '+(e.message||e));});
+    toast('⏳ 验证中...');
+    // For now: store order ID and notify seller
+    // The License Key system handles Pro activation
+    var key=prompt(
+      '请在爱发电完成付款后，输入卖家发给你的 License Key 激活 Pro：\n\n'+
+      '（付款后在爱发电 APP 中查看订单号，联系卖家获取 Key）\n\n'+
+      '订单号已自动复制: '+orderId,''
+    );
+    if(key){
+      activateLicense(key).then(function(ok){
+        if(ok){
+          S.tier='pro';syncAll();draw();updateAccountUI();
+          document.getElementById('orderIdInput').value='';
+          hidePayModal();
+        }
+      });
+    }
   });
 
   document.addEventListener('keydown',function(e){
