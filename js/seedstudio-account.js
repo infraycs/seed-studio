@@ -1,40 +1,36 @@
 /**
  * SeedStudio Account System v2
- * LeanCloud integration — auth, credits, referral
+ * Bmob (bmob.cn) — auth, credits, referral
  * Cost: ¥0/month (free tier)
  *
- * Dependencies: LeanCloud JS SDK (CDN)
- * <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4/dist/av-min.js"></script>
+ * Dependencies: Bmob JS SDK (CDN)
  */
 
 (function(global){
 'use strict';
 
-// ═══════════════ CONFIG ═══════════════
-// Replace these with your LeanCloud app keys
+// ═══════════════ CONFIG (YOUR Bmob keys) ═══════════════
 var CONFIG = {
-  APP_ID: 'YOUR_LEANCLOUD_APP_ID',
-  APP_KEY: 'YOUR_LEANCLOUD_APP_KEY',
-  SERVER_URL: 'https://YOUR_APP_ID.lc-cn-n1-shared.com', // LeanCloud 国内版
+  APP_ID: '7e66f9f90a2cb2c3447c5241b59c0673',
+  REST_KEY: 'b936e837095771edc3798f296164d7d3',
 };
 
 // ═══════════════ STATE ═══════════════
 var currentUser = null;
 var creditBalance = 0;
-var membershipTier = 'free'; // 'free' | 'pro' | 'lifetime'
+var membershipTier = 'free';
 var referralCode = '';
 
 // ═══════════════ INIT ═══════════════
 function init(callback){
-  if(typeof AV==='undefined'){
-    console.error('LeanCloud SDK not loaded');
-    callback('LeanCloud SDK not loaded', null);
+  if(typeof Bmob==='undefined'){
+    console.error('Bmob SDK not loaded');
+    callback('Bmob SDK not loaded', null);
     return;
   }
-  AV.init({appId:CONFIG.APP_ID, appKey:CONFIG.APP_KEY, serverURL:CONFIG.SERVER_URL});
+  Bmob.initialize(CONFIG.APP_ID, CONFIG.REST_KEY);
 
-  // Check existing session
-  var u=AV.User.current();
+  var u=Bmob.User.current();
   if(u){
     currentUser=u;
     referralCode=u.get('referralCode')||'';
@@ -46,10 +42,10 @@ function init(callback){
 
 // ═══════════════ AUTH ═══════════════
 function register(email, password, inviteCode, callback){
-  var user=new AV.User();
-  user.setUsername(email);
-  user.setPassword(password);
-  user.setEmail(email);
+  var user=new Bmob.User();
+  user.set('username', email);
+  user.set('password', password);
+  user.set('email', email);
   user.set('credits', 3); // 🎁 3 free credits
   user.set('tier', 'free');
   user.set('referralCode', generateReferralCode());
@@ -58,39 +54,37 @@ function register(email, password, inviteCode, callback){
   user.signUp().then(function(u){
     currentUser=u;
     referralCode=u.get('referralCode');
-
-    // Process referral if invite code provided
-    if(inviteCode){
-      processReferral(inviteCode, function(){});
-    }
-
+    if(inviteCode) processReferral(inviteCode, function(){});
     creditBalance=3;
     callback(null, u);
   }).catch(function(err){
-    callback(err.message, null);
+    // If user exists, try login
+    if(err.code===202||err.message.indexOf('already')>-1){
+      login(email, password, callback);
+    } else {
+      callback('注册失败: '+(err.message||err.code), null);
+    }
   });
 }
 
 function login(email, password, callback){
-  AV.User.logIn(email, password).then(function(u){
+  Bmob.User.login(email, password).then(function(u){
     currentUser=u;
     referralCode=u.get('referralCode')||'';
     refreshCredits(callback);
   }).catch(function(err){
-    callback(err.message, null);
+    callback('登录失败: '+(err.message||err.code), null);
   });
 }
 
 function logout(callback){
-  AV.User.logOut().then(function(){
+  Bmob.User.logout().then(function(){
     currentUser=null;
     creditBalance=0;
     membershipTier='free';
     referralCode='';
     callback(null);
-  }).catch(function(err){
-    callback(err.message);
-  });
+  }).catch(function(err){callback(err.message);});
 }
 
 // ═══════════════ CREDITS ═══════════════
@@ -106,53 +100,66 @@ function refreshCredits(callback){
 }
 
 function deductCredit(amount, reason, callback){
-  if(!currentUser){callback('Not logged in');return;}
-
+  if(!currentUser){callback('请先登录',null);return;}
   amount=amount||1;
-  reason=reason||'export';
 
-  // Membership check: Pro/Lifetime = unlimited (no deduction)
   if(membershipTier==='pro'||membershipTier==='lifetime'){
     callback(null,{deducted:0, remaining:creditBalance, unlimited:true});
     return;
   }
 
-  // Free tier: check balance
   if(creditBalance<amount){
     callback('积分不足！请充值或邀请好友获取免费积分',null);
     return;
   }
 
-  // Deduct via Cloud Function (server-authoritative)
-  AV.Cloud.run('deductCredit',{amount:amount,reason:reason}).then(function(r){
+  // Deduct via Bmob Cloud Function (server-side, Master Key)
+  var params={userId:currentUser.id, amount:amount, reason:reason||'export'};
+  Bmob.Cloud.run('deductCredit', params).then(function(r){
     creditBalance=r.remaining;
     callback(null,{deducted:amount, remaining:creditBalance});
   }).catch(function(err){
-    callback(err.message,null);
-  });
-}
-
-function addCredits(amount, source, callback){
-  if(!currentUser){callback('Not logged in');return;}
-  AV.Cloud.run('addCredits',{amount:amount,source:source}).then(function(r){
-    creditBalance=r.remaining;
-    callback(null,{added:amount, remaining:creditBalance});
-  }).catch(function(err){
-    callback(err.message,null);
+    // Fallback: client-side deduction (less secure, but functional)
+    var newBal=creditBalance-amount;
+    currentUser.set('credits', newBal);
+    currentUser.save().then(function(){
+      creditBalance=newBal;
+      callback(null,{deducted:amount, remaining:creditBalance});
+    }).catch(function(e2){
+      callback('扣款失败: '+(e2.message||e2.code),null);
+    });
   });
 }
 
 // ═══════════════ REFERRAL ═══════════════
 function generateReferralCode(){
-  return 'SEED-'+Math.random().toString(36).substring(2,8).toUpperCase();
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code='';
+  for(var i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
 }
 
 function processReferral(inviteCode, callback){
-  AV.Cloud.run('processReferral',{inviteCode:inviteCode}).then(function(r){
-    creditBalance=r.userCredits;
-    callback(null,{message:'🎁 邀请成功！你和邀请人各获得 +2 积分', credits:creditBalance});
+  var query=new Bmob.Query(Bmob.User);
+  query.equalTo('referralCode','==',inviteCode);
+  query.find().then(function(users){
+    if(users.length>0){
+      var inviter=users[0];
+      // Give inviter +2 credits
+      inviter.set('credits', (inviter.get('credits')||0)+2);
+      inviter.save();
+      // Give new user +2 (on top of 3 free)
+      if(currentUser){
+        currentUser.set('credits', creditBalance+2);
+        currentUser.save().then(function(){
+          creditBalance+=2;
+        });
+      }
+      callback(null,{message:'🎁 邀请成功！你和好友各获得 +2 积分'});
+    } else {
+      callback('邀请码无效',null);
+    }
   }).catch(function(err){
-    // Silently fail — referral is bonus, not critical
     callback(err.message,null);
   });
 }
@@ -162,11 +169,20 @@ function getReferralLink(){
   return 'https://www.seedstudio.top/?ref='+referralCode;
 }
 
+// ═══════════════ PROCESS INVITE FROM URL ═══════════════
+function checkURLInvite(){
+  var p=new URLSearchParams(window.location.search);
+  var ref=p.get('ref');
+  if(ref) localStorage.setItem('seedstudio_invite', ref);
+  return ref||localStorage.getItem('seedstudio_invite')||'';
+}
+
 // ═══════════════ EXPORT ═══════════════
 global.SeedStudioAccount={
   init:init, register:register, login:login, logout:logout,
   refreshCredits:refreshCredits, deductCredit:deductCredit,
-  addCredits:addCredits, getReferralLink:getReferralLink,
+  getReferralLink:getReferralLink, checkURLInvite:checkURLInvite,
+  processReferral:processReferral,
   get currentUser(){return currentUser;},
   get creditBalance(){return creditBalance;},
   get membershipTier(){return membershipTier;},
