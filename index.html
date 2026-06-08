@@ -408,7 +408,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 </div>
 
 <!-- ═══════════════ CANVAS ═══════════════ -->
-<div id="canvas-wrap"></div>
+<div id="canvas-wrap">
+<!-- Account bar -->
+<div id="account-bar" style="position:fixed;top:12px;right:16px;z-index:100;display:flex;align-items:center;gap:10px;font-size:0.75rem;font-family:var(--font);">
+  <span id="creditDisplay" style="color:var(--accent2);font-weight:700;"></span>
+  <button id="btnAccount" class="btn btn-outline" style="padding:5px 12px;font-size:0.7rem;flex:0 0 auto;">🔐 登录</button>
+</div>
+</div>
 
 <!-- ═══════ PAYMENT MODAL ═══════ -->
 <div class="modal-overlay" id="payModal">
@@ -439,6 +445,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <div id="toast"></div>
 
 <!-- ═══════════════ p5.js ═══════════════ -->
+
+  <!-- LeanCloud SDK (account system) -->
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4/dist/av-min.js"
+    onerror="console.warn('LeanCloud SDK unavailable, guest mode');window.AV=undefined;">
+  </script>
+  <script src="js/seedstudio-account.js"></script>
 <script src="p5.min.js"
   onerror="this.onerror=null;this.src='https://unpkg.com/p5@1.9.4/lib/p5.min.js';">
 </script>
@@ -678,12 +690,33 @@ function randomize(){
   syncAll();draw();saveURL();toast('🎲 新海报 · 种子 '+S.seed);
 }
 function exportPNG(){
-  if(!p5inst)return; var ow=S.W,oh=S.H;
-  if(S.tier==='free'){var longest=Math.max(ow,oh);if(longest>1200){var ratio=1200/longest;S.W=Math.floor(ow*ratio);S.H=Math.floor(oh*ratio);}}
-  var scale=S.tier==='pro'?2:1,fw=S.W,fh=S.H;S.W=fw*scale;S.H=fh*scale;draw();
-  p5inst.save('seedstudio_'+S.seed+'_'+S.layout+'_'+S.palette+(S.tier==='free'?'_free':'')+'.png');
-  S.W=fw;S.H=fh;draw();
-  toast(S.tier==='free'?'📥 已导出(免费版含水印) · 升级Pro获4K无水印':'📥 Pro 4K无水印已导出');
+  if(!p5inst)return;
+
+  function doExport(){
+    var ow=S.W,oh=S.H;
+    if(S.tier==='free'){var longest=Math.max(ow,oh);if(longest>1200){var ratio=1200/longest;S.W=Math.floor(ow*ratio);S.H=Math.floor(oh*ratio);}}
+    var sc=S.tier==='pro'?2:1,fw=S.W,fh=S.H;S.W=fw*sc;S.H=fh*sc;draw();
+    p5inst.save('seedstudio_'+S.seed+'_'+S.layout+'_'+S.palette+(S.tier==='free'?'_free':'')+'.png');
+    S.W=fw;S.H=fh;draw();
+    toast(S.tier==='free'?'📥 已导出(免费版含水印)':'📥 Pro 4K无水印已导出');
+  }
+
+  // Credit check for logged-in users
+  if(window.SeedStudioAccount&&window.SeedStudioAccount.isLoggedIn&&S.tier!=='pro'){
+    if(window.SeedStudioAccount.creditBalance>0){
+      window.SeedStudioAccount.deductCredit(1,'export',function(err){
+        if(err){toast('❌ '+err);return;}
+        updateAccountUI(); doExport();
+      });
+    } else {
+      var link=window.SeedStudioAccount.getReferralLink();
+      if(confirm('积分不足！\n\n点确定复制邀请链接\n分享给好友双方各得 +2 积分\n\n或前往爱发电充值')){
+        navigator.clipboard.writeText(link); toast('📋 邀请链接已复制！');
+      }
+    }
+  } else {
+    doExport();
+  }
 }
 function copyImg(){
   if(!p5inst)return;p5inst.canvas.elt.toBlob(function(b){navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(function(){toast('📋 已复制到剪贴板');},function(){toast('❌ 失败，请用导出PNG');});});
@@ -781,6 +814,44 @@ function init(){
       case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
     }
   });
+
+
+  // Account system UI
+  function updateAccountUI(){
+    var disp=document.getElementById('creditDisplay');
+    var btn=document.getElementById('btnAccount');
+    var acc=window.SeedStudioAccount;
+    if(acc&&acc.isLoggedIn){
+      disp.textContent='💰 '+(acc.membershipTier==='pro'||acc.membershipTier==='lifetime'?'无限':acc.creditBalance);
+      btn.textContent='👤 已登录';
+      btn.onclick=function(){acc.logout(function(){updateAccountUI();syncAll();draw();});toast('已退出登录');};
+      if(acc.membershipTier==='pro'||acc.membershipTier==='lifetime'){S.tier='pro';}
+    } else {
+      disp.textContent=''; btn.textContent='🔐 登录';
+      btn.onclick=function(){showLoginDialog();};
+    }
+  }
+
+  function showLoginDialog(){
+    var email=prompt('📧 输入邮箱注册/登录：\n\n🎁 新用户自动获得 3 免费积分\n👥 邀请好友双方各 +2 积分','');
+    if(!email)return;
+    var password=prompt('🔑 输入密码（新用户自动注册）：','');
+    if(!password)return;
+    var acc=window.SeedStudioAccount;
+    if(!acc){toast('账户系统加载中，请刷新重试');return;}
+    acc.register(email,password,'',function(err,user){
+      if(err){
+        // Try login instead
+        acc.login(email,password,function(e2,u2){
+          if(e2)toast('❌ '+e2);
+          else{updateAccountUI();toast('✅ 登录成功！积分: '+acc.creditBalance);}
+        });
+      } else {
+        updateAccountUI();toast('🎉 注册成功！获得 3 免费积分');
+      }
+    });
+  }
+  updateAccountUI();
 
   // Create p5
   try{
