@@ -10,7 +10,7 @@ function init(cb){
   cr=parseInt(localStorage.getItem('ss_cr'))||0;
   ti=localStorage.getItem('ss_ti')||'free';
   var e=localStorage.getItem('ss_em')||'',p=localStorage.getItem('ss_pw')||'';
-  if(uid&&e){call('login',{e:e,p:p}).then(function(r){cr=r.cr;ti=r.ti;saveLocal();cb(null,r);})['catch'](function(){/* API down - keep local state */cb(null,null);});}
+  if(uid&&e){call('login',{e:e,p:p}).then(function(r){cr=r.cr;ti=r.ti;saveLocal();cb(null,r);})['catch'](function(err){if(err&&err.message==='invalid'){logout();}cb(null,null);});}
   else cb(null,null);
 }
 
