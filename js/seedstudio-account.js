@@ -8,12 +8,12 @@ function init(cb){
   else cb(null,null);
 }
 
-function register(email,pw,cb){
-  call('reg',{e:email,p:pw}).then(function(r){if(r.error){cb(r.error,null);return;}uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);localStorage.setItem('ss_em',email);localStorage.setItem('ss_pw',pw);cb(null,r);}).catch(function(e){cb(e.message,null);});
-}
-
 function login(email,pw,cb){
   call('login',{e:email,p:pw}).then(function(r){if(r.error){cb(r.error,null);return;}uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);localStorage.setItem('ss_em',email);localStorage.setItem('ss_pw',pw);cb(null,r);}).catch(function(e){cb(e.message,null);});
+}
+
+function register(email,pw,cb){
+  call('reg',{e:email,p:pw}).then(function(r){if(r.error){cb(r.error,null);return;}uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);localStorage.setItem('ss_em',email);localStorage.setItem('ss_pw',pw);cb(null,r);}).catch(function(e){cb(e.message,null);});
 }
 
 function logout(){localStorage.removeItem('ss_id');localStorage.removeItem('ss_em');localStorage.removeItem('ss_pw');uid='';cr=0;ti='free';}
@@ -24,4 +24,4 @@ function lookupKey(oid,cb){call('lookup',{oid:oid}).then(function(r){if(r.ok)cb(
 
 function activateLicense(key,cb){call('upgrade',{id:uid,tk:key}).then(function(r){if(r.ok){ti='pro';cr=999;cb(null,r);}else{cb(r.error||'failed',null);}}).catch(function(e){cb(e.message,null);});}
 
-global.SS={init:init,register:register,login:login,logout:logout,deduct:deduct,lookupKey:lookupKey,activateLicense:activateLicense,get id(){return uid;},get cr(){return cr;},get ti(){return ti;},get loggedIn(){return!!uid;}};
+var SS={init:init,login:login,register:register,logout:logout,deduct:deduct,lookupKey:lookupKey,activateLicense:activateLicense,get id(){return uid;},get cr(){return cr;},get ti(){return ti;},get loggedIn(){return!!uid;}};
