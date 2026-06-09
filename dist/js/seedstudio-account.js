@@ -1,5 +1,5 @@
 var uid='',cr=0,ti='free';
-var API='https://seedstudio-d6gcgy3nwa8b4e1ca-1323980712.tcloudbaseapp.com/api';
+var API='https://seedstudio-d6gcgy3nwa8b4e1ca.service.tcloudbase.com/api';
 
 function call(a,d){return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,data:d||{}})}).then(function(r){return r.json();}).then(function(v){if(v.error)throw new Error(v.error);return v;});}
 
