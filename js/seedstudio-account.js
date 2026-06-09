@@ -30,10 +30,13 @@ function deduct(amt,cb){
   u.c-=(amt||1);save();cb(null,{rm:u.c});
 }
 
-var MASTER_KEY='SEEDSTUDIO2024';
+// Hash of the real key. Only the seller knows the original.
+var KEY_HASH='6e07dc1c';
+
+function h(s){for(var i=0,r=0;i<s.length;i++){r=((r<<5)-r)+s.charCodeAt(i);r|=0;}return(r>>>0).toString(16).slice(0,8);}
 
 function activateLicense(key,cb){
-  if(key.trim().toUpperCase()===MASTER_KEY){u.t='pro';u.c=999;save();cb(null,{ok:1,t:'pro'});}
+  if(h(key.trim())===KEY_HASH){u.t='pro';u.c=999;save();cb(null,{ok:1,t:'pro'});}
   else cb('invalid key',null);
 }
 
