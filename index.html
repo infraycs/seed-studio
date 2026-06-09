@@ -301,6 +301,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <button value="galaxy">🌌 星系</button>
         <button value="kaleidoscope">💠 万花筒</button>
         <button value="fluid">🌊 流体</button>
+        <button value="ripple">〰️ 波纹</button>
+        <button value="fractal">🌿 分形</button>
+        <button value="geodesic">🔺 几何</button>
+        <button value="bloom">🌸 绽放</button>
+        <button value="circuit">⚡ 电路</button>
       </div>
     </div>
 
@@ -316,6 +321,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <button value="lines">╱ 线条</button>
         <button value="rects">■ 方块</button>
         <button value="triangles">▲ 三角</button>
+        <button value="hexagons">⬡ 六边</button>
+        <button value="stars">★ 星形</button>
+        <button value="dots">· 细点</button>
         <button value="mixed">✧ 混合</button>
       </div>
     </div>
@@ -418,7 +426,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">R</kbd> 随机 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">E</kbd> 导出 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Ctrl+Z</kbd> 撤销<br>
-        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">1-5</kbd> 切换版式 &nbsp;
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">1-0</kbd> 10种版式 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Space</kbd> 全屏
       </div>
     </div>
@@ -529,6 +537,14 @@ const PALETTES={
   neon:['#0a0020','#1a0060','#6200ea','#d500f9','#00e5ff','#76ff03'],
   mono:['#0a0a0a','#1a1a1a','#404040','#808080','#c0c0c0','#f0f0f0'],
   terracotta:['#1a0c08','#4a1c12','#8b3a22','#c56a3a','#e89860','#fddcc8'],
+  sunset:['#1a0510','#4a1030','#8b1a4a','#e84a6c','#ffa07a','#ffe4c4'],
+  cyber:['#000a14','#001a3a','#003d6b','#00a8cc','#00f0ff','#b0f8ff'],
+  matcha:['#0a1208','#1a2e12','#2d4a1a','#5c8a3a','#90c860','#d8f0c8'],
+  midnight:['#020812','#0a1a30','#142850','#2a4a80','#5078b0','#a8c8e0'],
+  coral:['#0a0608','#3a1620','#6b2840','#cc4878','#ff80a8','#ffd0e0'],
+  ink:['#050508','#12121a','#2a2a38','#585868','#9898a8','#e8e8f0'],
+  candy:['#0a0820','#3a1860','#8028a0','#e048d0','#ff80f0','#ffe0fc'],
+  retro:['#0a0208','#2a0a30','#6b1860','#c830a0','#ff60c0','#ffc8e8'],
 };
 const PAL_KEYS=Object.keys(PALETTES);
 
@@ -576,16 +592,19 @@ function drawWatermark(p){
 
 function drawShapeGlow(p,x,y,size,type,rng,rotVar,col,alpha){
   alpha=alpha||1; p.push(); p.translate(x,y); p.rotate(rotVar*p.TWO_PI);
-  var t=type==='mixed'?['circles','lines','rects','triangles'][Math.floor(rng()*4)]:type;
+  var ta=['circles','lines','rects','triangles','hexagons','stars','dots'],t=type==='mixed'?ta[Math.floor(rng()*7)]:type;
   p.noStroke(); var gc=p.color(col); gc.setAlpha(alpha*30); p.fill(gc);
-  if(t==='circles')p.circle(0,0,size*2.5); else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*2,size*2);}
+  if(t==='circles'||t==='dots')p.circle(0,0,t==='dots'?size*1.2:size*2.5); else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*2,size*2);} else if(t==='hexagons'||t==='stars')p.circle(0,0,size*2.2);
   var mc=p.color(col); mc.setAlpha(alpha*255); p.fill(mc);
   if(rng()>0.7){p.noFill();p.stroke(col);p.strokeWeight(p.random(0.5,1.8));}
   switch(t){
     case'circles':p.circle(0,0,size);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.circle(0,0,size*(0.3+rng()*0.45));}break;
+    case'dots':p.circle(0,0,size*0.5);if(rng()>0.6){p.noFill();p.strokeWeight(p.random(0.2,1));p.circle(0,0,size*(0.15+rng()*0.25));}break;
     case'lines':p.strokeWeight(p.random(0.8,3));var a=rng()*p.TWO_PI,l=size*(0.5+rng()*0.5);p.line(Math.cos(a)*l*0.5,Math.sin(a)*l*0.5,-Math.cos(a)*l*0.5,-Math.sin(a)*l*0.5);if(rng()>0.4){var a2=a+p.HALF_PI;p.line(Math.cos(a2)*l*0.3,Math.sin(a2)*l*0.3,-Math.cos(a2)*l*0.3,-Math.sin(a2)*l*0.3);}break;
     case'rects':p.rectMode(p.CENTER);var rw=size*(0.45+rng()*0.55),rh=size*(0.45+rng()*0.55);p.rect(0,0,rw,rh);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.rect(0,0,rw*0.5,rh*0.5);}break;
     case'triangles':var pts=[];for(var i=0;i<3;i++){var ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.5,rr=size*(0.35+rng()*0.3);pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});}p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);break;
+    case'hexagons':p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI,r=size*(0.4+rng()*0.3);p.vertex(Math.cos(ang)*r,Math.sin(ang)*r);}p.endShape(p.CLOSE);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.2));p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI;var r2=size*0.2;p.vertex(Math.cos(ang)*r2,Math.sin(ang)*r2);}p.endShape(p.CLOSE);}break;
+    case'stars':p.beginShape();for(var i=0;i<10;i++){var ang=(i/10)*p.TWO_PI-p.HALF_PI,ir=i%2===0?size*(0.35+rng()*0.35):size*(0.12+rng()*0.12);p.vertex(Math.cos(ang)*ir,Math.sin(ang)*ir);}p.endShape(p.CLOSE);break;
   }
   p.pop();
 }
@@ -670,6 +689,110 @@ function drawFluid(p,rng,pal,shape,density,scale,rot,noiseAmt){
   drawVignette(p);drawGrain(p,rng,0.022);
 }
 
+// ═══════════════ LAYOUT 6: RIPPLE ═══════════════
+function drawRipple(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var nc=Math.floor(p.map(density,5,100,2,7)),minR=Math.min(S.W,S.H),steps=Math.floor(p.map(density,5,100,8,30));
+  for(var c=0;c<nc;c++){
+    var cx=S.W*(0.1+rng()*0.8),cy=S.H*(0.1+rng()*0.8),rippleCl=pal[1+Math.floor((c/nc)*(pal.length-1))];
+    for(var s=0;s<steps;s++){
+      var t=s/steps,r=minR*(0.02+t*0.55)*scale*(0.5+rng()*0.5),a=t>0.7?p.map(t,0.7,1,0.25,0.02):0.28;
+      var col=p.color(rippleCl);col.setAlpha(a*255);p.stroke(col);p.strokeWeight(p.map(t,0,1,4,0.3)*scale);p.noFill();
+      p.beginShape();
+      for(var i=0;i<72;i++){
+        var ang=(i/72)*p.TWO_PI,nj=noiseAmt*minR*0.015*p.noise(cx*0.01+r*0.005,cy*0.01+ang*3)*10;
+        var px=cx+Math.cos(ang)*(r+nj),py=cy+Math.sin(ang)*(r+nj);
+        p.vertex(px,py);
+      }
+      p.endShape(p.CLOSE);
+      if(rng()>0.9){var rx=cx+rng()*r*0.8-r*0.4,ry=cy+rng()*r*0.8-r*0.4;drawShapeGlow(p,rx,ry,r*0.06*scale,shape,rng,rot/360*(rng()-0.5),rippleCl,a*2);}
+    }
+  }
+  drawVignette(p);drawGrain(p,rng,0.018);
+}
+
+// ═══════════════ LAYOUT 7: FRACTAL ═══════════════
+function drawFractal(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var depth=Math.floor(p.map(density,5,100,4,10)),angVar=p.map(noiseAmt,0,1,p.PI*0.1,p.PI*0.6),brVar=0.58+rng()*0.2;
+  function branch(x,y,len,ang,d,clr){
+    if(d>depth||len<1.5)return;
+    var col=p.color(pal[clr%pal.length]);col.setAlpha(p.map(d,0,depth,0.85,0.15));p.stroke(col);p.strokeWeight(p.map(d,0,depth,4*scale,0.3));p.noFill();
+    var ex=x+Math.cos(ang)*len,ey=y+Math.sin(ang)*len;
+    if(rng()>0.8){var mx=x+(ex-x)*(0.3+rng()*0.4),my=y+(ey-y)*(0.3+rng()*0.4)+rng()*len*0.15;p.bezier(x,y,mx-rng()*len*0.1,my-rng()*len*0.1,mx+rng()*len*0.1,my+rng()*len*0.1,ex,ey);}
+    else p.line(x,y,ex,ey);
+    if(rng()>0.65&&d>depth-2){var sz=len*0.08*scale;drawShapeGlow(p,ex,ey,sz,shape,rng,rot/360*(rng()-0.5),pal[clr%pal.length],0.7);}
+    var nB=2+Math.floor(rng()*2);
+    for(var i=0;i<nB;i++){var na=ang+(i-nB/2+0.5)*angVar*(0.7+rng()*0.6),nl=len*brVar*(0.65+rng()*0.7);branch(ex,ey,nl,na,d+1,(clr+1)%pal.length);}
+  }
+  p.push();p.translate(S.W/2,S.H*0.85);branch(0,0,S.H*0.35*scale,-p.HALF_PI,0,0);p.pop();
+  if(rng()>0.4){p.push();p.translate(S.W*(0.15+rng()*0.7),S.H*0.88);branch(0,0,S.H*0.2*scale,-p.HALF_PI,0,Math.floor(rng()*3));p.pop();}
+  drawVignette(p);drawGrain(p,rng,0.018);
+}
+
+// ═══════════════ LAYOUT 8: GEODESIC ═══════════════
+function drawGeodesic(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var nP=Math.floor(p.map(density,5,100,25,150)),points=[],minR=Math.min(S.W,S.H);
+  for(var i=0;i<nP;i++){points.push({x:rng()*S.W,y:rng()*S.H,z:rng(),col:pal[1+Math.floor(rng()*(pal.length-1))]});}
+  points.sort(function(a,b){return a.z-b.z;});
+  p.strokeCap(p.ROUND);
+  for(var i=0;i<points.length;i++){var pi=points[i],bestD=Infinity,bestJ=-1;
+    for(var j=0;j<i;j++){var dx=pi.x-points[j].x,dy=pi.y-points[j].y,d=dx*dx+dy*dy;if(d<bestD){bestD=d;bestJ=j;}}
+    if(bestJ>=0&&bestD<minR*minR*0.3){
+      var pj=points[bestJ],d=Math.sqrt(bestD),al=p.map(d,0,minR*0.5,0.8,0.15),midCl=pal[Math.min(Math.floor((i/nP)*pal.length),pal.length-1)];
+      var col=p.color(midCl);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(d,0,minR*0.5,3*scale,0.3));
+      p.line(pi.x,pi.y,pj.x,pj.y);
+    }
+    if(rng()>0.92&&bestD<minR*minR*0.08){drawShapeGlow(p,pi.x,pi.y,3+bestD*0.03*scale,shape,rng,rot/360*(rng()-0.5),pi.col,0.65);}
+  }
+  drawVignette(p);drawGrain(p,rng,0.02);
+}
+
+// ═══════════════ LAYOUT 9: BLOOM ═══════════════
+function drawBloom(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var nf=Math.floor(p.map(density,5,100,3,15)),petals=Math.floor(p.map(density,5,100,4,16)),layers=Math.floor(p.map(density,5,100,1,4));
+  for(var f=0;f<nf;f++){
+    var cx=S.W*(0.1+rng()*0.8),cy=S.H*(0.1+rng()*0.8),fr=Math.min(S.W,S.H)*(0.04+rng()*0.18)*scale;
+    var fc=pal[1+Math.floor((f/nf)*(pal.length-1))];
+    for(var l=0;l<layers;l++){
+      var lr=fr*(0.3+l*0.7/layers),al=p.map(l,0,layers,0.6,0.2);
+      for(var pt=0;pt<petals;pt++){
+        var ang=(pt/petals)*p.TWO_PI+rot*0.01*(rng()-0.5),petalR=lr*(0.5+rng()*0.5);
+        var px=cx+Math.cos(ang)*petalR,py=cy+Math.sin(ang)*petalR;
+        var sz=fr*0.25*(0.3+rng()*0.7);
+        drawShapeGlow(p,px,py,sz,shape,rng,rot/360*(rng()-0.5),fc,al);
+        if(rng()>0.4){var px2=cx+Math.cos(ang+noiseAmt*0.5)*petalR*0.75;drawShapeGlow(p,px2,py,sz*0.6,shape,rng,rot/360*(rng()-0.5),pal[Math.min(1+Math.floor((f/nf)*(pal.length-1))+1,pal.length-1)],al*0.5);}
+      }
+    }
+    p.fill(pal[pal.length-1]);p.noStroke();p.circle(cx,cy,fr*0.12);
+  }
+  drawVignette(p);drawGrain(p,rng,0.02);
+}
+
+// ═══════════════ LAYOUT 10: CIRCUIT ═══════════════
+function drawCircuit(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  p.background(pal[0]);
+  var gridX=Math.floor(p.map(density,5,100,8,30)),gridY=Math.floor(gridX*S.H/S.W),minR=Math.min(S.W,S.H);
+  var cw=S.W/(gridX+1),ch=S.H/(gridY+1),nodes=[],g=50;
+  for(var x=1;x<=gridX;x++){for(var y=1;y<=gridY;y++){nodes.push({x:x*cw+rng()*g-g/2,y:y*ch+rng()*g-g/2,used:false});}}
+  var nt=Math.floor(nodes.length*0.4*(density/100));
+  for(var i=0;i<nt;i++){
+    var a=Math.floor(rng()*nodes.length),b=Math.floor(rng()*nodes.length);
+    if(a===b)continue;
+    var na=nodes[a],nb=nodes[b],dx=nb.x-na.x,dy=nb.y-na.y;
+    if(Math.abs(dx)+Math.abs(dy)>Math.min(S.W,S.H)*0.5)continue;
+    var cl=pal[1+Math.floor(rng()*(pal.length-1))],al=p.map(Math.abs(dx)+Math.abs(dy),0,minR*0.5,0.7,0.12);
+    var col=p.color(cl);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(al,0,0.7,0.3,2.5*scale));p.noFill();
+    if(rng()>0.5){var mx=na.x+(rng()>0.5?dx:0),my=nb.y+(rng()>0.5?dy:0);p.line(na.x,na.y,mx,my);p.line(mx,my,nb.x,nb.y);}
+    else p.line(na.x,na.y,nb.x,nb.y);
+    nodes[a].used=true;nodes[b].used=true;
+  }
+  nodes.forEach(function(n){if(n.used&&rng()>0.85){drawShapeGlow(p,n.x,n.y,4+rng()*6*scale,shape,rng,rot/360*(rng()-0.5),pal[pal.length-2],rng()*0.6+0.3);}});
+  drawGrain(p,rng,0.015);
+}
+
 // ═══════════════ MAIN DRAW ═══════════════
 var p5inst;
 function draw(){
@@ -683,6 +806,11 @@ function draw(){
     case'galaxy':drawGalaxy(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     case'kaleidoscope':drawKaleidoscope(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     case'fluid':drawFluid(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'ripple':drawRipple(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'fractal':drawFractal(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'geodesic':drawGeodesic(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'bloom':drawBloom(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'circuit':drawCircuit(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
   }
   drawWatermark(p);
@@ -739,7 +867,7 @@ function renderHistory(){
 // ═══════════════ PLUGINS ═══════════════
 function randomize(){
   pushHistory();S.seed=Math.floor(Math.random()*1e9);
-  S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid'][Math.floor(Math.random()*5)];
+  S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid','ripple','fractal','geodesic','bloom','circuit'][Math.floor(Math.random()*10)];
   S.palette=PAL_KEYS[Math.floor(Math.random()*PAL_KEYS.length)];
   S.shape=['circles','lines','rects','triangles','mixed'][Math.floor(Math.random()*5)];
   S.density=Math.floor(Math.random()*80)+10;S.scale=Math.round((Math.random()*2+0.3)*100)/100;S.rotation=Math.floor(Math.random()*360);S.noise=Math.round(Math.random()*100)/100;
@@ -857,6 +985,11 @@ function init(){
       case'3':S.layout='galaxy';syncAll();draw();saveURL();break;
       case'4':S.layout='kaleidoscope';syncAll();draw();saveURL();break;
       case'5':S.layout='fluid';syncAll();draw();saveURL();break;
+      case'6':S.layout='ripple';syncAll();draw();saveURL();break;
+      case'7':S.layout='fractal';syncAll();draw();saveURL();break;
+      case'8':S.layout='geodesic';syncAll();draw();saveURL();break;
+      case'9':S.layout='bloom';syncAll();draw();saveURL();break;
+      case'0':S.layout='circuit';syncAll();draw();saveURL();break;
       case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
     }
   });
