@@ -306,6 +306,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <button value="geodesic">🔺 几何</button>
         <button value="bloom">🌸 绽放</button>
         <button value="circuit">⚡ 电路</button>
+        <button value="poster">🎨 海报</button>
       </div>
     </div>
 
@@ -529,22 +530,22 @@ function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.im
 
 // ═══════════════ PALETTES ═══════════════
 const PALETTES={
-  aurora:['#0b1021','#1a237e','#4527a0','#00838f','#00e5ff','#84ffff'],
-  ember:['#1a0a00','#5d1a0a','#b83b00','#ff6b35','#ffb347','#ffe0b2'],
-  forest:['#0d1a0d','#1a3d1a','#2d6b2d','#4a9e4a','#80c880','#c8e8c8'],
-  sakura:['#1a0a14','#5c1a3a','#b84c6c','#f0a0b8','#ffd0dd','#fff0f4'],
-  ocean:['#021024','#052954','#0a4c8a','#1a8ec4','#5cb8e4','#c8e8f8'],
-  neon:['#0a0020','#1a0060','#6200ea','#d500f9','#00e5ff','#76ff03'],
-  mono:['#0a0a0a','#1a1a1a','#404040','#808080','#c0c0c0','#f0f0f0'],
-  terracotta:['#1a0c08','#4a1c12','#8b3a22','#c56a3a','#e89860','#fddcc8'],
-  sunset:['#1a0510','#4a1030','#8b1a4a','#e84a6c','#ffa07a','#ffe4c4'],
-  cyber:['#000a14','#001a3a','#003d6b','#00a8cc','#00f0ff','#b0f8ff'],
-  matcha:['#0a1208','#1a2e12','#2d4a1a','#5c8a3a','#90c860','#d8f0c8'],
-  midnight:['#020812','#0a1a30','#142850','#2a4a80','#5078b0','#a8c8e0'],
-  coral:['#0a0608','#3a1620','#6b2840','#cc4878','#ff80a8','#ffd0e0'],
-  ink:['#050508','#12121a','#2a2a38','#585868','#9898a8','#e8e8f0'],
-  candy:['#0a0820','#3a1860','#8028a0','#e048d0','#ff80f0','#ffe0fc'],
-  retro:['#0a0208','#2a0a30','#6b1860','#c830a0','#ff60c0','#ffc8e8'],
+  midnight:['#060b18','#0d1d4a','#1a3f8f','#2979d4','#5ca8f0','#d0e8ff'],
+  aurora:['#060818','#1a1050','#3a2090','#1a8088','#30d8c8','#b8fff8'],
+  ember:['#0c0604','#2a1208','#7a2808','#d84818','#ff8c48','#ffe0c8'],
+  forest:['#060c04','#142a0a','#1a5212','#3a8a28','#78c058','#d8f8c8'],
+  sakura:['#0c0610','#2a1030','#6a2058','#c84888','#f890b8','#ffe8f0'],
+  ocean:['#040c18','#082048','#0c3c70','#1a68b8','#48a8e0','#c8e8f8'],
+  neon:['#040010','#180040','#5000b0','#d000f0','#00e8ff','#88ff20'],
+  mono:['#060606','#181818','#383838','#707070','#b8b8b8','#f0f0f0'],
+  coral:['#060a0c','#142830','#2a4858','#d06060','#f89078','#ffe0d8'],
+  sunset:['#080410','#200c30','#501858','#d04060','#ffa060','#ffe8c0'],
+  matcha:['#060c06','#0e200c','#1a3a14','#4a8028','#88c058','#e0f8d0'],
+  ink:['#040408','#10101a','#282838','#606070','#b0b0b8','#f0f0f0'],
+  candy:['#060818','#200840','#6018a0','#e040c0','#ff80e8','#ffe0f8'],
+  retro:['#080604','#201408','#4a2008','#c86818','#f0b040','#ffe8c0'],
+  arctic:['#040c14','#081c30','#103450','#1a6088','#48a8c8','#d8f0f8'],
+  terracotta:['#080604','#1c1008','#3a1c10','#985830','#d89058','#f8e0c8'],
 };
 const PAL_KEYS=Object.keys(PALETTES);
 
@@ -559,26 +560,38 @@ function snap(){ return(({seed,layout,palette,shape,density,scale,rotation,noise
 // ═══════════════ DRAWING UTILS ═══════════════
 function drawBackground(p,pal){
   const ctx=p.drawingContext;
-  const grad=ctx.createRadialGradient(S.W*0.35,S.H*0.35,S.H*0.05,S.W*0.65,S.H*0.65,S.H*0.75);
-  grad.addColorStop(0,pal[Math.min(2,pal.length-1)]); grad.addColorStop(0.5,pal[0]); grad.addColorStop(1,'#000000');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,S.W,S.H);
-  const g2=ctx.createRadialGradient(S.W*0.8,S.H*0.2,0,S.W*0.8,S.H*0.2,S.H*0.5);
-  g2.addColorStop(0,pal[Math.min(4,pal.length-1)]+'18'); g2.addColorStop(1,'transparent');
-  ctx.fillStyle=g2; ctx.fillRect(0,0,S.W,S.H);
+  // Main radial: deep center glow → dark edges
+  const grad=ctx.createRadialGradient(S.W*0.45,S.H*0.45,0,S.W*0.5,S.H*0.5,S.H*0.8);
+  grad.addColorStop(0,pal[1]);grad.addColorStop(0.35,pal[0]);grad.addColorStop(0.7,'#020208');grad.addColorStop(1,'#000004');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
+  // Secondary color wash
+  const g2=ctx.createRadialGradient(S.W*0.75,S.H*0.2,0,S.W*0.65,S.H*0.35,S.H*0.65);
+  g2.addColorStop(0,pal[2]+'15');g2.addColorStop(1,'transparent');
+  ctx.fillStyle=g2;ctx.fillRect(0,0,S.W,S.H);
+  // Highlight accent spot
+  const g3=ctx.createRadialGradient(S.W*0.6,S.H*0.4,0,S.W*0.6,S.H*0.4,S.H*0.25);
+  g3.addColorStop(0,pal[4]+'0d');g3.addColorStop(1,'transparent');
+  ctx.fillStyle=g3;ctx.fillRect(0,0,S.W,S.H);
 }
 
 function drawGrain(p,rng,amount){
-  amount=amount||0.03; p.loadPixels();
-  const d=p.pixelDensity(),total=4*S.W*S.H*d*d,step=Math.max(1,Math.floor(1/0.08));
-  for(let i=0;i<total;i+=4*step){ const n=(rng()-0.5)*amount*255; p.pixels[i]+=n; p.pixels[i+1]+=n; p.pixels[i+2]+=n; }
+  amount=amount||0.02;p.loadPixels();
+  const d=p.pixelDensity(),total=4*S.W*S.H*d*d;
+  for(let i=0;i<total;i+=4*Math.floor(2+rng()*3)){
+    const n=(rng()-0.5)*amount*255;
+    const grain=rng()>0.92?n*2:n;
+    p.pixels[i]=Math.min(255,Math.max(0,p.pixels[i]+grain));
+    p.pixels[i+1]=Math.min(255,Math.max(0,p.pixels[i+1]+grain));
+    p.pixels[i+2]=Math.min(255,Math.max(0,p.pixels[i+2]+grain));
+  }
   p.updatePixels();
 }
 
 function drawVignette(p){
-  const ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.55;
-  const grad=ctx.createRadialGradient(cx,cy,r*0.6,cx,cy,r*1.15);
-  grad.addColorStop(0,'transparent'); grad.addColorStop(0.7,'transparent'); grad.addColorStop(1,'rgba(0,0,0,0.55)');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,S.W,S.H);
+  const ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5;
+  const grad=ctx.createRadialGradient(cx,cy,r*0.5,cx,cy,r*1.2);
+  grad.addColorStop(0,'transparent');grad.addColorStop(0.6,'transparent');grad.addColorStop(0.85,'rgba(0,0,0,0.25)');grad.addColorStop(1,'rgba(0,0,0,0.6)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
 }
 
 function drawWatermark(p){
@@ -793,6 +806,46 @@ function drawCircuit(p,rng,pal,shape,density,scale,rot,noiseAmt){
   drawGrain(p,rng,0.015);
 }
 
+// ═══════════════ LAYOUT 11: POSTER ═══════════════
+function drawPoster(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  p.background(pal[0]);
+  var cols=Math.floor(p.map(density,5,100,2,5)),rows=Math.floor(cols*S.H/S.W),cw=S.W/cols,ch=S.H/rows;
+  // Large color blocks with minimal geometry
+  var nB=Math.floor(p.map(density,5,100,3,10));
+  for(var i=0;i<nB;i++){
+    var bx=rng()*S.W*0.95,by=rng()*S.H*0.95,bw=S.W*(0.08+rng()*0.35),bh=S.H*(0.06+rng()*0.3);
+    var ci=1+Math.floor(rng()*(pal.length-1));
+    p.fill(pal[ci]);p.noStroke();
+    if(rng()>0.5){var r=rng()*bw*0.1;p.rect(bx,by,bw,bh,r,r,r,r);}else p.rect(bx,by,bw,bh);
+    // Subtle inner accent line
+    if(rng()>0.6){p.stroke(pal[Math.min(ci+1,pal.length-1)]);p.strokeWeight(0.5);p.noFill();p.rect(bx+bw*0.08,by+bh*0.08,bw*0.84,bh*0.84);}
+  }
+  // Fine geometric lines
+  var nL=Math.floor(p.map(density,5,100,1,6));
+  for(var i=0;i<nL;i++){
+    var lx=rng()*S.W,ly=rng()*S.H;
+    p.stroke(pal[pal.length-2]);p.strokeWeight(0.3+rng()*1.2);
+    if(rng()>0.5){p.line(lx,ly,lx+S.W*(0.1+rng()*0.4),ly+S.H*(rng()-0.5)*0.3);}
+    else{p.line(lx,ly,lx+S.W*(rng()-0.5)*0.3,ly+S.H*(0.1+rng()*0.4));}
+  }
+  // Decorative elements
+  var nD=Math.floor(p.map(density,5,100,5,25));
+  for(var i=0;i<nD;i++){
+    var dx=rng()*S.W,dy=rng()*S.H,ds=rng()*18*scale+3,dc=pal[1+Math.floor(rng()*(pal.length-1))];
+    drawShapeGlow(p,dx,dy,ds,shape,rng,rot/360*(rng()-0.5),dc,0.5+rng()*0.5);
+  }
+  // Typography placeholder area
+  var th=S.H*0.06,tw=S.W*0.4;
+  p.fill(pal[pal.length-1]);p.noStroke();var ta=S.H*0.08;
+  p.rect(S.W*0.06,S.H*0.06,tw,th*0.6);
+  p.rect(S.W*0.06,S.H*0.14,tw*0.65,th*0.2);
+  for(var i=0;i<3;i++){p.fill(pal[4]);p.rect(S.W*0.06,S.H*(0.8+i*0.06),tw*0.35,th*0.15);}
+  p.drawingContext.globalAlpha=0.06;p.fill(pal[pal.length-1]);
+  for(var i=0;i<3;i++){var ly=S.H*(0.8+i*0.06);p.rect(S.W*0.06,ly,S.W*0.35,1);}
+  p.drawingContext.globalAlpha=1;
+  drawVignette(p);drawGrain(p,rng,0.012);
+}
+
 // ═══════════════ MAIN DRAW ═══════════════
 var p5inst;
 function draw(){
@@ -811,6 +864,7 @@ function draw(){
     case'geodesic':drawGeodesic(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     case'bloom':drawBloom(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     case'circuit':drawCircuit(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'poster':drawPoster(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
   }
   drawWatermark(p);
@@ -867,7 +921,7 @@ function renderHistory(){
 // ═══════════════ PLUGINS ═══════════════
 function randomize(){
   pushHistory();S.seed=Math.floor(Math.random()*1e9);
-  S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid','ripple','fractal','geodesic','bloom','circuit'][Math.floor(Math.random()*10)];
+  S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid','ripple','fractal','geodesic','bloom','circuit','poster'][Math.floor(Math.random()*11)];
   S.palette=PAL_KEYS[Math.floor(Math.random()*PAL_KEYS.length)];
   S.shape=['circles','lines','rects','triangles','mixed'][Math.floor(Math.random()*5)];
   S.density=Math.floor(Math.random()*80)+10;S.scale=Math.round((Math.random()*2+0.3)*100)/100;S.rotation=Math.floor(Math.random()*360);S.noise=Math.round(Math.random()*100)/100;
@@ -990,6 +1044,7 @@ function init(){
       case'8':S.layout='geodesic';syncAll();draw();saveURL();break;
       case'9':S.layout='bloom';syncAll();draw();saveURL();break;
       case'0':S.layout='circuit';syncAll();draw();saveURL();break;
+      case'-':S.layout='poster';syncAll();draw();saveURL();break;
       case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
     }
   });
