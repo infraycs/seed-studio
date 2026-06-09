@@ -297,16 +297,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       <div class="section-label">版式 Styles</div>
       <div class="pill-row" id="layoutPills">
         <button value="vortex" class="active">🌀 漩涡</button>
-        <button value="mondrian">🔷 蒙德里安</button>
-        <button value="galaxy">🌌 星系</button>
+        <button value="geometric">◼ 几何</button>
+        <button value="flowfield">🌊 流场</button>
         <button value="kaleidoscope">💠 万花筒</button>
-        <button value="fluid">🌊 流体</button>
-        <button value="ripple">〰️ 波纹</button>
-        <button value="fractal">🌿 分形</button>
-        <button value="geodesic">🔺 几何</button>
-        <button value="bloom">🌸 绽放</button>
-        <button value="circuit">⚡ 电路</button>
-        <button value="poster">🎨 海报</button>
+        <button value="cells">🔬 细胞</button>
+        <button value="layers">🫧 叠层</button>
       </div>
     </div>
 
@@ -427,7 +422,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">R</kbd> 随机 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">E</kbd> 导出 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Ctrl+Z</kbd> 撤销<br>
-        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">1-0</kbd> 10种版式 &nbsp;
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">1-6</kbd> 6种版式 &nbsp;
         <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Space</kbd> 全屏
       </div>
     </div>
@@ -557,29 +552,34 @@ const S={
 };
 function snap(){ return(({seed,layout,palette,shape,density,scale,rotation,noise,W,H})=>({seed,layout,palette,shape,density,scale,rotation,noise,W,H}))(S); }
 
+// ═══════════════ COLOR UTILS ═══════════════
+// Pick from palette with positional clumping — nearby positions get similar colors
+function pickColor(pal,t,seed){
+  var i=Math.floor(((Math.sin(seed*12.9898+78.233)*43758.5453)%1)*3.5);
+  i=Math.max(1,Math.min(pal.length-1,i+(t<0.5?0:2)));
+  return pal[i];
+}
+// Get 2-3 dominant colors from palette
+function dominantColors(pal){
+  return [pal[2],pal[1],pal[3]];
+}
+
 // ═══════════════ DRAWING UTILS ═══════════════
 function drawBackground(p,pal){
-  const ctx=p.drawingContext;
-  // Main radial: deep center glow → dark edges
-  const grad=ctx.createRadialGradient(S.W*0.45,S.H*0.45,0,S.W*0.5,S.H*0.5,S.H*0.8);
+  var ctx=p.drawingContext;
+  var grad=ctx.createRadialGradient(S.W*0.45,S.H*0.45,0,S.W*0.5,S.H*0.5,S.H*0.8);
   grad.addColorStop(0,pal[1]);grad.addColorStop(0.35,pal[0]);grad.addColorStop(0.7,'#020208');grad.addColorStop(1,'#000004');
   ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
-  // Secondary color wash
-  const g2=ctx.createRadialGradient(S.W*0.75,S.H*0.2,0,S.W*0.65,S.H*0.35,S.H*0.65);
-  g2.addColorStop(0,pal[2]+'15');g2.addColorStop(1,'transparent');
+  var g2=ctx.createRadialGradient(S.W*0.75,S.H*0.2,0,S.W*0.65,S.H*0.35,S.H*0.65);
+  g2.addColorStop(0,pal[2]+'12');g2.addColorStop(1,'transparent');
   ctx.fillStyle=g2;ctx.fillRect(0,0,S.W,S.H);
-  // Highlight accent spot
-  const g3=ctx.createRadialGradient(S.W*0.6,S.H*0.4,0,S.W*0.6,S.H*0.4,S.H*0.25);
-  g3.addColorStop(0,pal[4]+'0d');g3.addColorStop(1,'transparent');
-  ctx.fillStyle=g3;ctx.fillRect(0,0,S.W,S.H);
 }
 
 function drawGrain(p,rng,amount){
-  amount=amount||0.02;p.loadPixels();
-  const d=p.pixelDensity(),total=4*S.W*S.H*d*d;
-  for(let i=0;i<total;i+=4*Math.floor(2+rng()*3)){
-    const n=(rng()-0.5)*amount*255;
-    const grain=rng()>0.92?n*2:n;
+  amount=amount||0.018;p.loadPixels();
+  var d=p.pixelDensity(),total=4*S.W*S.H*d*d;
+  for(var i=0;i<total;i+=4*Math.floor(2+rng()*4)){
+    var n=(rng()-0.5)*amount*255,grain=rng()>0.93?n*2.5:n;
     p.pixels[i]=Math.min(255,Math.max(0,p.pixels[i]+grain));
     p.pixels[i+1]=Math.min(255,Math.max(0,p.pixels[i+1]+grain));
     p.pixels[i+2]=Math.min(255,Math.max(0,p.pixels[i+2]+grain));
@@ -588,262 +588,190 @@ function drawGrain(p,rng,amount){
 }
 
 function drawVignette(p){
-  const ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5;
-  const grad=ctx.createRadialGradient(cx,cy,r*0.5,cx,cy,r*1.2);
-  grad.addColorStop(0,'transparent');grad.addColorStop(0.6,'transparent');grad.addColorStop(0.85,'rgba(0,0,0,0.25)');grad.addColorStop(1,'rgba(0,0,0,0.6)');
+  var ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5;
+  var grad=ctx.createRadialGradient(cx,cy,r*0.45,cx,cy,r*1.2);
+  grad.addColorStop(0,'transparent');grad.addColorStop(0.55,'transparent');grad.addColorStop(0.82,'rgba(0,0,0,0.22)');grad.addColorStop(1,'rgba(0,0,0,0.55)');
   ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
 }
 
 function drawWatermark(p){
   if(S.tier==='pro')return;
-  const ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
-  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.textAlign='center';
+  var ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
+  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.12)';ctx.textAlign='center';
   ctx.fillText('Seed Studio · 种子画室',S.W/2,S.H-fs*0.8);
-  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.08)';
   ctx.fillText('seedstudio.top',S.W/2,S.H-fs*0.1);
 }
 
+// Shape drawing with organic perturbation (Hobbs principle: imperfect geometry)
 function drawShapeGlow(p,x,y,size,type,rng,rotVar,col,alpha){
-  alpha=alpha||1; p.push(); p.translate(x,y); p.rotate(rotVar*p.TWO_PI);
+  alpha=alpha||1;var nj=(rng()-0.5)*size*0.2;
+  p.push();p.translate(x+nj,y+nj);p.rotate(rotVar*p.TWO_PI+(rng()-0.5)*0.3);
   var ta=['circles','lines','rects','triangles','hexagons','stars','dots'],t=type==='mixed'?ta[Math.floor(rng()*7)]:type;
-  p.noStroke(); var gc=p.color(col); gc.setAlpha(alpha*30); p.fill(gc);
-  if(t==='circles'||t==='dots')p.circle(0,0,t==='dots'?size*1.2:size*2.5); else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*2,size*2);} else if(t==='hexagons'||t==='stars')p.circle(0,0,size*2.2);
-  var mc=p.color(col); mc.setAlpha(alpha*255); p.fill(mc);
-  if(rng()>0.7){p.noFill();p.stroke(col);p.strokeWeight(p.random(0.5,1.8));}
+  // Subtle outer glow
+  p.noStroke();var gc=p.color(col);gc.setAlpha(alpha*20);p.fill(gc);
+  if(t==='circles'||t==='dots')p.circle(0,0,t==='dots'?size*1.1:size*2.2);
+  else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*1.8,size*1.8);}
+  else if(t==='hexagons'||t==='stars')p.circle(0,0,size*2);
+  // Main fill with slight opacity for layering effect
+  var mc=p.color(col);mc.setAlpha(alpha*220);p.fill(mc);
+  if(rng()>0.65){p.noFill();p.stroke(col);p.strokeWeight(0.4+rng()*1.2);}
   switch(t){
-    case'circles':p.circle(0,0,size);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.circle(0,0,size*(0.3+rng()*0.45));}break;
-    case'dots':p.circle(0,0,size*0.5);if(rng()>0.6){p.noFill();p.strokeWeight(p.random(0.2,1));p.circle(0,0,size*(0.15+rng()*0.25));}break;
-    case'lines':p.strokeWeight(p.random(0.8,3));var a=rng()*p.TWO_PI,l=size*(0.5+rng()*0.5);p.line(Math.cos(a)*l*0.5,Math.sin(a)*l*0.5,-Math.cos(a)*l*0.5,-Math.sin(a)*l*0.5);if(rng()>0.4){var a2=a+p.HALF_PI;p.line(Math.cos(a2)*l*0.3,Math.sin(a2)*l*0.3,-Math.cos(a2)*l*0.3,-Math.sin(a2)*l*0.3);}break;
-    case'rects':p.rectMode(p.CENTER);var rw=size*(0.45+rng()*0.55),rh=size*(0.45+rng()*0.55);p.rect(0,0,rw,rh);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.5));p.rect(0,0,rw*0.5,rh*0.5);}break;
-    case'triangles':var pts=[];for(var i=0;i<3;i++){var ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.5,rr=size*(0.35+rng()*0.3);pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});}p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);break;
-    case'hexagons':p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI,r=size*(0.4+rng()*0.3);p.vertex(Math.cos(ang)*r,Math.sin(ang)*r);}p.endShape(p.CLOSE);if(rng()>0.5){p.noFill();p.strokeWeight(p.random(0.3,1.2));p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI;var r2=size*0.2;p.vertex(Math.cos(ang)*r2,Math.sin(ang)*r2);}p.endShape(p.CLOSE);}break;
-    case'stars':p.beginShape();for(var i=0;i<10;i++){var ang=(i/10)*p.TWO_PI-p.HALF_PI,ir=i%2===0?size*(0.35+rng()*0.35):size*(0.12+rng()*0.12);p.vertex(Math.cos(ang)*ir,Math.sin(ang)*ir);}p.endShape(p.CLOSE);break;
+    case'circles':p.circle(0,0,size);if(rng()>0.45){p.noFill();p.strokeWeight(0.3+rng()*1);p.circle(0,0,size*(0.25+rng()*0.4));}break;
+    case'dots':p.circle(0,0,size*0.4);break;
+    case'lines':p.strokeWeight(0.6+rng()*2.4);var a=rng()*p.TWO_PI,l=size*(0.5+rng()*0.5);p.line(Math.cos(a)*l*0.4,Math.sin(a)*l*0.4,-Math.cos(a)*l*0.4,-Math.sin(a)*l*0.4);if(rng()>0.35){var a2=a+p.HALF_PI;p.line(Math.cos(a2)*l*0.25,Math.sin(a2)*l*0.25,-Math.cos(a2)*l*0.25,-Math.sin(a2)*l*0.25);}break;
+    case'rects':p.rectMode(p.CENTER);var rw=size*(0.4+rng()*0.5),rh=size*(0.4+rng()*0.5);p.rect(0,0,rw,rh);if(rng()>0.4){p.noFill();p.strokeWeight(0.3+rng()*1);p.rect(0,0,rw*0.45,rh*0.45);}break;
+    case'triangles':var pts=[];for(var i=0;i<3;i++){var ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.4,rr=size*(0.3+rng()*0.3);pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});}p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);break;
+    case'hexagons':p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI,r=size*(0.35+rng()*0.25);p.vertex(Math.cos(ang)*r,Math.sin(ang)*r);}p.endShape(p.CLOSE);break;
+    case'stars':p.beginShape();for(var i=0;i<10;i++){var ang=(i/10)*p.TWO_PI-p.HALF_PI,ir=i%2===0?size*(0.3+rng()*0.3):size*(0.1+rng()*0.1);p.vertex(Math.cos(ang)*ir,Math.sin(ang)*ir);}p.endShape(p.CLOSE);break;
   }
   p.pop();
 }
 
 // ═══════════════ LAYOUTS ═══════════════
+// 1: VORTEX — spiral with color clumping, large negative space center
 function drawVortex(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal); var cx=S.W/2,cy=S.H/2,maxR=Math.min(S.W,S.H)*0.52;
-  var spirals=Math.floor(p.map(density,5,100,2,8)),arms=Math.floor(p.map(density,5,100,2,5)),pts=Math.floor(p.map(density,5,100,30,180));
-  for(var s=0;s<spirals;s++){ var ba=(s/spirals)*p.TWO_PI+rot*(p.PI/180),pc=pal[1+Math.floor((s/spirals)*(pal.length-1))];
-    for(var arm=0;arm<arms;arm++){ var ao=(arm/arms)*p.TWO_PI; p.noFill();
-      for(var i=1;i<pts;i++){ var t=i/pts,r=maxR*(0.02+t*0.98),sa=ba+ao+t*6*p.PI*(0.5+noiseAmt),nj=noiseAmt*(rng()-0.5)*maxR*0.06;
-        var x=cx+Math.cos(sa)*(r+nj),y=cy+Math.sin(sa)*(r+nj),es=p.map(r,0,maxR,1.5,14)*scale*(0.4+rng()*0.7),al=p.map(t,0,1,0.15,0.9);
-        var col=p.color(pc);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(r,0,maxR,0.3,3)*scale);p.fill(col);
-        if(i%Math.max(1,Math.floor(20/density*10))===0)drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),pc,al);
-      }
-    }
-  }
-  var ctx=p.drawingContext,cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.15);cg.addColorStop(0,pal[pal.length-1]+'40');cg.addColorStop(1,'transparent');ctx.fillStyle=cg;ctx.fillRect(0,0,S.W,S.H);
-  drawVignette(p); drawGrain(p,rng,0.02);
-}
-
-function drawMondrian(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  p.background(pal[pal.length-1]); var minSize=Math.floor(p.map(density,5,100,120,25)),lw=Math.floor(p.map(density,5,100,2,14)*scale),lc=pal[0];
-  var rects=[{x:0,y:0,w:S.W,h:S.H}],divs=Math.floor(p.map(density,5,100,3,12));
-  for(var d=0;d<divs;d++){ var idx=Math.floor(rng()*rects.length),r=rects[idx]; if(r.w<minSize*2&&r.h<minSize*2)continue;
-    if(rng()>0.5&&r.w>minSize*2){ var sx=r.x+minSize+rng()*(r.w-minSize*2); rects.splice(idx,1,{x:r.x,y:r.y,w:sx-r.x,h:r.h},{x:sx+lw,y:r.y,w:r.x+r.w-sx-lw,h:r.h}); }
-    else if(r.h>minSize*2){ var sy=r.y+minSize+rng()*(r.h-minSize*2); rects.splice(idx,1,{x:r.x,y:r.y,w:r.w,h:sy-r.y},{x:r.x,y:sy+lw,w:r.w,h:r.y+r.h-sy-lw}); }
-  }
-  rects.forEach(function(r){ var uc=rng()>0.25; p.fill(uc?pal[Math.floor(rng()*(pal.length-1))]:pal[pal.length-1]); p.noStroke(); p.rect(r.x+lw/2,r.y+lw/2,r.w-lw,r.h-lw); });
-  p.noFill();p.stroke(lc);p.strokeWeight(lw);p.strokeCap(p.SQUARE);
-  var allX=new Set(),allY=new Set(); rects.forEach(function(r){allX.add(r.x);allX.add(r.x+r.w);allY.add(r.y);allY.add(r.y+r.h);});
-  allX.forEach(function(x){if(x>0&&x<S.W)p.line(x,0,x,S.H);}); allY.forEach(function(y){if(y>0&&y<S.H)p.line(0,y,S.W,y);});
-  p.strokeWeight(lw*1.5);p.noFill();p.rect(lw/2,lw/2,S.W-lw,S.H-lw);
-  rects.forEach(function(r){if(rng()>0.85&&r.w>minSize*1.5&&r.h>minSize*1.5){var cx=r.x+r.w/2,cy=r.y+r.h/2,sz=Math.min(r.w,r.h)*0.3*scale,cl=pal[Math.floor(rng()*(pal.length-2))+1];p.fill(cl);p.noStroke();drawShapeGlow(p,cx,cy,sz,shape,rng,rot/360*(rng()-0.5),cl,0.7);}});
-  drawGrain(p,rng,0.015);
-}
-
-function drawGalaxy(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal); var nc=Math.floor(p.map(density,5,100,2,6)),centers=[];
-  for(var i=0;i<nc;i++)centers.push({x:S.W*(0.15+rng()*0.7),y:S.H*(0.15+rng()*0.7),mass:0.5+rng()*1.5,color:pal[1+Math.floor(rng()*(pal.length-1))]});
-  var nP=Math.floor(p.map(density,5,100,200,3000)),steps=Math.floor(p.map(density,5,100,15,50));p.noFill();
-  for(var i=0;i<nP;i++){ var px=rng()*S.W,py=rng()*S.H,vx=(rng()-0.5)*2,vy=(rng()-0.5)*2,nr=centers[Math.floor(rng()*centers.length)];
-    p.beginShape();
-    for(var t=0;t<steps;t++){ var dx=nr.x-px,dy=nr.y-py,dist=Math.max(Math.sqrt(dx*dx+dy*dy),2),force=nr.mass*0.08/(dist*0.1);vx+=dx/dist*force;vy+=dy/dist*force;
-      vx+=noiseAmt*(rng()-0.5)*0.4;vy+=noiseAmt*(rng()-0.5)*0.4;var rf=rot/360*0.15;vx+=-dy/dist*rf;vy+=dx/dist*rf;vx*=0.97;vy*=0.97;px+=vx*scale;py+=vy*scale;
-      var al=p.map(t,0,steps,0.6,0.02),col=p.color(nr.color);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(t,0,steps,1.8,0.15));p.vertex(px,py);
-      if(px<-20||px>S.W+20||py<-20||py>S.H+20)break;
-    }
-    p.endShape();
-    if(rng()>0.97){var col=p.color(nr.color);col.setAlpha(rng()*180+30);p.fill(col);p.noStroke();p.circle(px,py,rng()*3*scale+1);}
-  }
-  centers.forEach(function(c){var ctx=p.drawingContext,g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,S.H*0.12);g.addColorStop(0,c.color+'30');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,S.W,S.H);});
-  drawVignette(p);drawGrain(p,rng,0.025);
-}
-
-function drawKaleidoscope(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal); var cx=S.W/2,cy=S.H/2,folds=Math.floor(p.map(density,5,100,5,18)),ne=Math.floor(p.map(density,5,100,8,50)),maxR=Math.min(S.W,S.H)*0.48,sa=p.TWO_PI/folds;
-  for(var e=0;e<ne;e++){ var r=maxR*(0.03+rng()*0.97),ba=rng()*sa,es=p.map(r,0,maxR,2,22)*scale*(0.4+rng()*0.7),ci=1+Math.floor((r/maxR)*(pal.length-1)),col=pal[Math.min(ci,pal.length-1)];
-    for(var f=0;f<folds;f++){ var ang=ba+f*sa,jr=noiseAmt*maxR*0.04*(rng()-0.5),ja=noiseAmt*sa*0.3*(rng()-0.5),x=cx+Math.cos(ang+ja)*(r+jr),y=cy+Math.sin(ang+ja)*(r+jr),ma=sa-ba+f*sa,mx=cx+Math.cos(ma)*(r+jr),my=cy+Math.sin(ma)*(r+jr);
-      drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),col,0.75); if(rng()>0.7)drawShapeGlow(p,mx,my,es*0.7,shape,rng,rot/360*(rng()-0.5),col,0.45);
-    }
-  }
-  p.fill(pal[pal.length-1]);p.noStroke();p.circle(cx,cy,12*scale);
-  for(var i=1;i<=3;i++){p.noFill();p.stroke(pal[1]);p.strokeWeight(1.5);p.circle(cx,cy,18*scale*i);}
-  drawGrain(p,rng,0.02);
-}
-
-function drawFluid(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal); var fc=Math.floor(S.W/15),fr=Math.floor(S.H/15),field=[],zb=rng()*200;
-  for(var y=0;y<fr;y++){field[y]=[];for(var x=0;x<fc;x++)field[y][x]=p.noise(x*0.08,y*0.08,zb)*p.TWO_PI*3;}
-  var nl=Math.floor(p.map(density,5,100,1,4)),ppl=Math.floor(p.map(density,5,100,30,200));
-  for(var l=0;l<nl;l++){ var lc=pal[1+Math.floor((l/nl)*(pal.length-1))],steps=Math.floor(p.map(density,5,100,25,80));
-    for(var i=0;i<ppl;i++){ var px=rng()*S.W,py=rng()*S.H,st=rng();p.noFill();p.beginShape();
-      for(var t=0;t<steps;t++){ var fcx=Math.floor(p.constrain(px/15,0,fc-1)),fry=Math.floor(p.constrain(py/15,0,fr-1)),fa=(field[fry]&&field[fry][fcx])?field[fry][fcx]:0,ss=(1+rng()*3)*scale;
-        px+=Math.cos(fa)*ss;py+=Math.sin(fa)*ss;var ri=rot/360*0.4;px+=Math.cos(fa+p.HALF_PI)*ri;py+=Math.sin(fa+p.HALF_PI)*ri;px+=(rng()-0.5)*noiseAmt*3;py+=(rng()-0.5)*noiseAmt*3;
-        var prog=(st+t/steps)%1,al=p.map(prog,0,1,0.7,0.03),col=p.color(lc);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(prog,0,1,3*scale,0.2));p.vertex(px,py);
-        if(px<-20||px>S.W+20||py<-20||py>S.H+20)break;
-      }
-      p.endShape();
-    }
-  }
-  drawVignette(p);drawGrain(p,rng,0.022);
-}
-
-// ═══════════════ LAYOUT 6: RIPPLE ═══════════════
-function drawRipple(p,rng,pal,shape,density,scale,rot,noiseAmt){
   drawBackground(p,pal);
-  var nc=Math.floor(p.map(density,5,100,2,7)),minR=Math.min(S.W,S.H),steps=Math.floor(p.map(density,5,100,8,30));
-  for(var c=0;c<nc;c++){
-    var cx=S.W*(0.1+rng()*0.8),cy=S.H*(0.1+rng()*0.8),rippleCl=pal[1+Math.floor((c/nc)*(pal.length-1))];
-    for(var s=0;s<steps;s++){
-      var t=s/steps,r=minR*(0.02+t*0.55)*scale*(0.5+rng()*0.5),a=t>0.7?p.map(t,0.7,1,0.25,0.02):0.28;
-      var col=p.color(rippleCl);col.setAlpha(a*255);p.stroke(col);p.strokeWeight(p.map(t,0,1,4,0.3)*scale);p.noFill();
-      p.beginShape();
-      for(var i=0;i<72;i++){
-        var ang=(i/72)*p.TWO_PI,nj=noiseAmt*minR*0.015*p.noise(cx*0.01+r*0.005,cy*0.01+ang*3)*10;
-        var px=cx+Math.cos(ang)*(r+nj),py=cy+Math.sin(ang)*(r+nj);
-        p.vertex(px,py);
-      }
-      p.endShape(p.CLOSE);
-      if(rng()>0.9){var rx=cx+rng()*r*0.8-r*0.4,ry=cy+rng()*r*0.8-r*0.4;drawShapeGlow(p,rx,ry,r*0.06*scale,shape,rng,rot/360*(rng()-0.5),rippleCl,a*2);}
+  var cx=S.W/2,cy=S.H/2,maxR=Math.min(S.W,S.H)*0.48;
+  var arms=Math.floor(p.map(density,5,100,2,6)),pts=Math.floor(p.map(density,5,100,40,200));
+  var doms=dominantColors(pal);
+  for(var arm=0;arm<arms;arm++){
+    var ao=(arm/arms)*p.TWO_PI+rot*(p.PI/180),armCol=doms[arm%doms.length];
+    p.noFill();
+    for(var i=Math.floor(pts*0.15);i<pts;i++){
+      var t=i/pts,r=maxR*(t*0.98+0.02),sa=ao+t*5*p.PI*(0.4+noiseAmt*0.6);
+      var x=cx+Math.cos(sa)*r,y=cy+Math.sin(sa)*r;
+      var es=p.map(r,0,maxR,1.5,10)*scale,al=p.map(t,0,1,0.08,0.7);
+      var col=p.color(armCol);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(r,0,maxR,0.3,2.2)*scale);
+      if(i%Math.max(1,Math.floor(25/density*8))===0)drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),armCol,al*0.8);
     }
   }
+  // Bright center focal point
+  var ctx=p.drawingContext,cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.18);
+  cg.addColorStop(0,pal[4]+'25');cg.addColorStop(0.5,pal[2]+'08');cg.addColorStop(1,'transparent');
+  ctx.fillStyle=cg;ctx.fillRect(0,0,S.W,S.H);
   drawVignette(p);drawGrain(p,rng,0.018);
 }
 
-// ═══════════════ LAYOUT 7: FRACTAL ═══════════════
-function drawFractal(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal);
-  var depth=Math.floor(p.map(density,5,100,4,10)),angVar=p.map(noiseAmt,0,1,p.PI*0.1,p.PI*0.6),brVar=0.58+rng()*0.2;
-  function branch(x,y,len,ang,d,clr){
-    if(d>depth||len<1.5)return;
-    var col=p.color(pal[clr%pal.length]);col.setAlpha(p.map(d,0,depth,0.85,0.15));p.stroke(col);p.strokeWeight(p.map(d,0,depth,4*scale,0.3));p.noFill();
-    var ex=x+Math.cos(ang)*len,ey=y+Math.sin(ang)*len;
-    if(rng()>0.8){var mx=x+(ex-x)*(0.3+rng()*0.4),my=y+(ey-y)*(0.3+rng()*0.4)+rng()*len*0.15;p.bezier(x,y,mx-rng()*len*0.1,my-rng()*len*0.1,mx+rng()*len*0.1,my+rng()*len*0.1,ex,ey);}
-    else p.line(x,y,ex,ey);
-    if(rng()>0.65&&d>depth-2){var sz=len*0.08*scale;drawShapeGlow(p,ex,ey,sz,shape,rng,rot/360*(rng()-0.5),pal[clr%pal.length],0.7);}
-    var nB=2+Math.floor(rng()*2);
-    for(var i=0;i<nB;i++){var na=ang+(i-nB/2+0.5)*angVar*(0.7+rng()*0.6),nl=len*brVar*(0.65+rng()*0.7);branch(ex,ey,nl,na,d+1,(clr+1)%pal.length);}
-  }
-  p.push();p.translate(S.W/2,S.H*0.85);branch(0,0,S.H*0.35*scale,-p.HALF_PI,0,0);p.pop();
-  if(rng()>0.4){p.push();p.translate(S.W*(0.15+rng()*0.7),S.H*0.88);branch(0,0,S.H*0.2*scale,-p.HALF_PI,0,Math.floor(rng()*3));p.pop();}
-  drawVignette(p);drawGrain(p,rng,0.018);
-}
-
-// ═══════════════ LAYOUT 8: GEODESIC ═══════════════
-function drawGeodesic(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal);
-  var nP=Math.floor(p.map(density,5,100,25,150)),points=[],minR=Math.min(S.W,S.H);
-  for(var i=0;i<nP;i++){points.push({x:rng()*S.W,y:rng()*S.H,z:rng(),col:pal[1+Math.floor(rng()*(pal.length-1))]});}
-  points.sort(function(a,b){return a.z-b.z;});
-  p.strokeCap(p.ROUND);
-  for(var i=0;i<points.length;i++){var pi=points[i],bestD=Infinity,bestJ=-1;
-    for(var j=0;j<i;j++){var dx=pi.x-points[j].x,dy=pi.y-points[j].y,d=dx*dx+dy*dy;if(d<bestD){bestD=d;bestJ=j;}}
-    if(bestJ>=0&&bestD<minR*minR*0.3){
-      var pj=points[bestJ],d=Math.sqrt(bestD),al=p.map(d,0,minR*0.5,0.8,0.15),midCl=pal[Math.min(Math.floor((i/nP)*pal.length),pal.length-1)];
-      var col=p.color(midCl);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(d,0,minR*0.5,3*scale,0.3));
-      p.line(pi.x,pi.y,pj.x,pj.y);
-    }
-    if(rng()>0.92&&bestD<minR*minR*0.08){drawShapeGlow(p,pi.x,pi.y,3+bestD*0.03*scale,shape,rng,rot/360*(rng()-0.5),pi.col,0.65);}
-  }
-  drawVignette(p);drawGrain(p,rng,0.02);
-}
-
-// ═══════════════ LAYOUT 9: BLOOM ═══════════════
-function drawBloom(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  drawBackground(p,pal);
-  var nf=Math.floor(p.map(density,5,100,3,15)),petals=Math.floor(p.map(density,5,100,4,16)),layers=Math.floor(p.map(density,5,100,1,4));
-  for(var f=0;f<nf;f++){
-    var cx=S.W*(0.1+rng()*0.8),cy=S.H*(0.1+rng()*0.8),fr=Math.min(S.W,S.H)*(0.04+rng()*0.18)*scale;
-    var fc=pal[1+Math.floor((f/nf)*(pal.length-1))];
-    for(var l=0;l<layers;l++){
-      var lr=fr*(0.3+l*0.7/layers),al=p.map(l,0,layers,0.6,0.2);
-      for(var pt=0;pt<petals;pt++){
-        var ang=(pt/petals)*p.TWO_PI+rot*0.01*(rng()-0.5),petalR=lr*(0.5+rng()*0.5);
-        var px=cx+Math.cos(ang)*petalR,py=cy+Math.sin(ang)*petalR;
-        var sz=fr*0.25*(0.3+rng()*0.7);
-        drawShapeGlow(p,px,py,sz,shape,rng,rot/360*(rng()-0.5),fc,al);
-        if(rng()>0.4){var px2=cx+Math.cos(ang+noiseAmt*0.5)*petalR*0.75;drawShapeGlow(p,px2,py,sz*0.6,shape,rng,rot/360*(rng()-0.5),pal[Math.min(1+Math.floor((f/nf)*(pal.length-1))+1,pal.length-1)],al*0.5);}
-      }
-    }
-    p.fill(pal[pal.length-1]);p.noStroke();p.circle(cx,cy,fr*0.12);
-  }
-  drawVignette(p);drawGrain(p,rng,0.02);
-}
-
-// ═══════════════ LAYOUT 10: CIRCUIT ═══════════════
-function drawCircuit(p,rng,pal,shape,density,scale,rot,noiseAmt){
+// 2: GEOMETRIC — bold Swiss-design composition, 50% negative space
+function drawGeometric(p,rng,pal,shape,density,scale,rot,noiseAmt){
   p.background(pal[0]);
-  var gridX=Math.floor(p.map(density,5,100,8,30)),gridY=Math.floor(gridX*S.H/S.W),minR=Math.min(S.W,S.H);
-  var cw=S.W/(gridX+1),ch=S.H/(gridY+1),nodes=[],g=50;
-  for(var x=1;x<=gridX;x++){for(var y=1;y<=gridY;y++){nodes.push({x:x*cw+rng()*g-g/2,y:y*ch+rng()*g-g/2,used:false});}}
-  var nt=Math.floor(nodes.length*0.4*(density/100));
-  for(var i=0;i<nt;i++){
-    var a=Math.floor(rng()*nodes.length),b=Math.floor(rng()*nodes.length);
-    if(a===b)continue;
-    var na=nodes[a],nb=nodes[b],dx=nb.x-na.x,dy=nb.y-na.y;
-    if(Math.abs(dx)+Math.abs(dy)>Math.min(S.W,S.H)*0.5)continue;
-    var cl=pal[1+Math.floor(rng()*(pal.length-1))],al=p.map(Math.abs(dx)+Math.abs(dy),0,minR*0.5,0.7,0.12);
-    var col=p.color(cl);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(al,0,0.7,0.3,2.5*scale));p.noFill();
-    if(rng()>0.5){var mx=na.x+(rng()>0.5?dx:0),my=nb.y+(rng()>0.5?dy:0);p.line(na.x,na.y,mx,my);p.line(mx,my,nb.x,nb.y);}
-    else p.line(na.x,na.y,nb.x,nb.y);
-    nodes[a].used=true;nodes[b].used=true;
+  var doms=dominantColors(pal),minR=Math.min(S.W,S.H);
+  // One large focal shape cluster on left or right third
+  var side=rng()>0.5,baseX=side?S.W*0.15:S.W*0.8,baseY=S.H*0.45;
+  var nShapes=Math.floor(p.map(density,5,100,3,9));
+  for(var i=0;i<nShapes;i++){
+    var ox=baseX+rng()*minR*0.35-minR*0.18,oy=baseY+rng()*minR*0.4-minR*0.2;
+    var sz=minR*(0.06+rng()*0.16)*scale,cl=doms[Math.floor(rng()*doms.length)];
+    p.fill(cl);p.noStroke();
+    if(rng()>0.6)p.circle(ox,oy,sz);
+    else{p.rectMode(p.CENTER);p.rect(ox,oy,sz*(0.6+rng()*0.8),sz*(0.5+rng()*0.9));}
+    if(rng()>0.5){p.fill(pal[4]);var isz=sz*0.3;p.circle(ox+sz*0.15,oy-sz*0.15,isz);}
   }
-  nodes.forEach(function(n){if(n.used&&rng()>0.85){drawShapeGlow(p,n.x,n.y,4+rng()*6*scale,shape,rng,rot/360*(rng()-0.5),pal[pal.length-2],rng()*0.6+0.3);}});
-  drawGrain(p,rng,0.015);
-}
-
-// ═══════════════ LAYOUT 11: POSTER ═══════════════
-function drawPoster(p,rng,pal,shape,density,scale,rot,noiseAmt){
-  p.background(pal[0]);
-  var cols=Math.floor(p.map(density,5,100,2,5)),rows=Math.floor(cols*S.H/S.W),cw=S.W/cols,ch=S.H/rows;
-  // Large color blocks with minimal geometry
-  var nB=Math.floor(p.map(density,5,100,3,10));
-  for(var i=0;i<nB;i++){
-    var bx=rng()*S.W*0.95,by=rng()*S.H*0.95,bw=S.W*(0.08+rng()*0.35),bh=S.H*(0.06+rng()*0.3);
-    var ci=1+Math.floor(rng()*(pal.length-1));
-    p.fill(pal[ci]);p.noStroke();
-    if(rng()>0.5){var r=rng()*bw*0.1;p.rect(bx,by,bw,bh,r,r,r,r);}else p.rect(bx,by,bw,bh);
-    // Subtle inner accent line
-    if(rng()>0.6){p.stroke(pal[Math.min(ci+1,pal.length-1)]);p.strokeWeight(0.5);p.noFill();p.rect(bx+bw*0.08,by+bh*0.08,bw*0.84,bh*0.84);}
+  // Thin horizontal accent line
+  p.stroke(pal[4]);p.strokeWeight(1+scale);p.line(S.W*0.08,baseY+minR*0.2,S.W*0.6,baseY+minR*0.2);
+  // Small scattered accents
+  for(var i=0;i<Math.floor(density*0.3);i++){
+    var ax=rng()*S.W*0.7+(side?S.W*0.3:0),ay=rng()*S.H*0.7;
+    drawShapeGlow(p,ax,ay,rng()*5*scale+1.5,shape,rng,rot/360*(rng()-0.5),doms[Math.floor(rng()*doms.length)],rng()*0.4+0.2);
   }
-  // Fine geometric lines
-  var nL=Math.floor(p.map(density,5,100,1,6));
-  for(var i=0;i<nL;i++){
-    var lx=rng()*S.W,ly=rng()*S.H;
-    p.stroke(pal[pal.length-2]);p.strokeWeight(0.3+rng()*1.2);
-    if(rng()>0.5){p.line(lx,ly,lx+S.W*(0.1+rng()*0.4),ly+S.H*(rng()-0.5)*0.3);}
-    else{p.line(lx,ly,lx+S.W*(rng()-0.5)*0.3,ly+S.H*(0.1+rng()*0.4));}
-  }
-  // Decorative elements
-  var nD=Math.floor(p.map(density,5,100,5,25));
-  for(var i=0;i<nD;i++){
-    var dx=rng()*S.W,dy=rng()*S.H,ds=rng()*18*scale+3,dc=pal[1+Math.floor(rng()*(pal.length-1))];
-    drawShapeGlow(p,dx,dy,ds,shape,rng,rot/360*(rng()-0.5),dc,0.5+rng()*0.5);
-  }
-  // Typography placeholder area
-  var th=S.H*0.06,tw=S.W*0.4;
-  p.fill(pal[pal.length-1]);p.noStroke();var ta=S.H*0.08;
-  p.rect(S.W*0.06,S.H*0.06,tw,th*0.6);
-  p.rect(S.W*0.06,S.H*0.14,tw*0.65,th*0.2);
-  for(var i=0;i<3;i++){p.fill(pal[4]);p.rect(S.W*0.06,S.H*(0.8+i*0.06),tw*0.35,th*0.15);}
-  p.drawingContext.globalAlpha=0.06;p.fill(pal[pal.length-1]);
-  for(var i=0;i<3;i++){var ly=S.H*(0.8+i*0.06);p.rect(S.W*0.06,ly,S.W*0.35,1);}
-  p.drawingContext.globalAlpha=1;
   drawVignette(p);drawGrain(p,rng,0.012);
+}
+
+// 3: FLOWFIELD — particle flow accumulation (DesLauriers style)
+function drawFlowfield(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nP=Math.floor(p.map(density,5,100,150,1500));
+  var zn=rng()*100,zs=0.003+noiseAmt*0.008;
+  for(var i=0;i<nP;i++){
+    var px=rng()*S.W,py=rng()*S.H,st=rng();
+    var lc=doms[Math.floor(rng()*doms.length)];
+    p.noFill();
+    for(var t=0;t<Math.floor(3+rng()*12);t++){
+      var n=p.noise(px*zs,py*zs,zn)*p.TWO_PI*2;
+      px+=Math.cos(n)*scale*(0.8+rng()*2.5);py+=Math.sin(n)*scale*(0.8+rng()*2.5);
+      if(px<0||px>S.W||py<0||py>S.H)break;
+      var al=0.03+rng()*0.12,col=p.color(lc);col.setAlpha(al*255);
+      p.stroke(col);p.strokeWeight(0.15+rng()*1.2);
+      p.point(px,py);
+    }
+  }
+  drawVignette(p);drawGrain(p,rng,0.015);
+}
+
+// 4: KALEIDOSCOPE — n-fold symmetry with organic variation
+function drawKaleidoscope(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var cx=S.W/2,cy=S.H/2,folds=Math.floor(p.map(density,5,100,5,16));
+  var ne=Math.floor(p.map(density,5,100,6,40)),maxR=Math.min(S.W,S.H)*0.46,sa=p.TWO_PI/folds;
+  var doms=dominantColors(pal);
+  for(var e=0;e<ne;e++){
+    var r=maxR*(0.04+rng()*0.96),ba=rng()*sa;
+    var es=p.map(r,0,maxR,2,16)*scale,ci=Math.floor((r/maxR)*doms.length),col=doms[Math.min(ci,doms.length-1)];
+    for(var f=0;f<folds;f++){
+      var ang=ba+f*sa,jr=noiseAmt*maxR*0.03*(rng()-0.5),ja=noiseAmt*sa*0.25*(rng()-0.5);
+      var x=cx+Math.cos(ang+ja)*(r+jr),y=cy+Math.sin(ang+ja)*(r+jr);
+      drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),col,0.65);
+    }
+  }
+  p.fill(pal[4]);p.noStroke();p.circle(cx,cy,8*scale);
+  drawVignette(p);drawGrain(p,rng,0.018);
+}
+
+// 5: CELLS — Voronoi biological cell structures
+function drawCells(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nC=Math.floor(p.map(density,5,100,8,35));
+  var sites=[],minR=Math.min(S.W,S.H);
+  for(var i=0;i<nC;i++)sites.push({x:rng()*S.W,y:rng()*S.H,c:doms[Math.floor(rng()*doms.length)]});
+  // Draw cell edges by checking nearest site for each pixel-approximate cell
+  for(var i=0;i<sites.length;i++){
+    var si=sites[i],cellR=0;
+    for(var j=0;j<sites.length;j++){
+      if(i===j)continue;
+      var dx=si.x-sites[j].x,dy=si.y-sites[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(j===0||d<cellR)cellR=d;
+    }
+    cellR*=0.45;
+    if(cellR<3)continue;
+    var al=0.08+rng()*0.2,col=p.color(si.c);col.setAlpha(al*255);p.fill(col);p.noStroke();
+    // Draw organic cell shape
+    p.beginShape();
+    var nv=6+Math.floor(rng()*6);
+    for(var v=0;v<nv;v++){
+      var ang=(v/nv)*p.TWO_PI,rr=cellR*(0.5+rng()*0.5);
+      p.vertex(si.x+Math.cos(ang)*rr,si.y+Math.sin(ang)*rr);
+    }
+    p.endShape(p.CLOSE);
+    if(rng()>0.7)drawShapeGlow(p,si.x,si.y,cellR*0.25*scale,shape,rng,rot/360*(rng()-0.5),si.c,0.4);
+  }
+  drawVignette(p);drawGrain(p,rng,0.016);
+}
+
+// 6: LAYERS — overlapping transparent organic shapes (Hobbs watercolor-style)
+function drawLayers(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nL=Math.floor(p.map(density,5,100,4,18));
+  var minR=Math.min(S.W,S.H);
+  // Create focal area
+  var fx=S.W*(0.25+rng()*0.5),fy=S.H*(0.25+rng()*0.5);
+  for(var l=0;l<nL;l++){
+    var ox=fx+rng()*minR*0.6-minR*0.3,oy=fy+rng()*minR*0.5-minR*0.25;
+    var sz=minR*(0.04+rng()*0.22)*scale;
+    var cl=doms[Math.floor(rng()*doms.length)],al=0.03+rng()*0.12;
+    p.fill(cl);p.noStroke();
+    // Organic blob via noise-perturbed ellipse
+    p.beginShape();
+    var nv=10+Math.floor(rng()*10);
+    for(var v=0;v<nv;v++){
+      var ang=(v/nv)*p.TWO_PI,nj=noiseAmt*(rng()-0.5)*sz*0.5;
+      var rr=sz*(0.4+rng()*0.6)+nj;
+      p.vertex(ox+Math.cos(ang)*rr,oy+Math.sin(ang)*rr);
+    }
+    p.endShape(p.CLOSE);
+    if(rng()>0.55)drawShapeGlow(p,ox+rng()*sz*0.5-sz*0.25,oy+rng()*sz*0.5-sz*0.25,sz*0.15*scale,shape,rng,rot/360*(rng()-0.5),doms[Math.min(l%doms.length+1,doms.length-1)],0.5);
+  }
+  drawVignette(p);drawGrain(p,rng,0.015);
 }
 
 // ═══════════════ MAIN DRAW ═══════════════
@@ -855,16 +783,11 @@ function draw(){
   var pal=PALETTES[S.palette];
   switch(S.layout){
     case'vortex':drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'mondrian':drawMondrian(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'galaxy':drawGalaxy(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'geometric':drawGeometric(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'flowfield':drawFlowfield(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     case'kaleidoscope':drawKaleidoscope(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'fluid':drawFluid(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'ripple':drawRipple(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'fractal':drawFractal(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'geodesic':drawGeodesic(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'bloom':drawBloom(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'circuit':drawCircuit(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
-    case'poster':drawPoster(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'cells':drawCells(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'layers':drawLayers(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
   }
   drawWatermark(p);
@@ -921,7 +844,7 @@ function renderHistory(){
 // ═══════════════ PLUGINS ═══════════════
 function randomize(){
   pushHistory();S.seed=Math.floor(Math.random()*1e9);
-  S.layout=['vortex','mondrian','galaxy','kaleidoscope','fluid','ripple','fractal','geodesic','bloom','circuit','poster'][Math.floor(Math.random()*11)];
+  S.layout=['vortex','geometric','flowfield','kaleidoscope','cells','layers'][Math.floor(Math.random()*6)];
   S.palette=PAL_KEYS[Math.floor(Math.random()*PAL_KEYS.length)];
   S.shape=['circles','lines','rects','triangles','mixed'][Math.floor(Math.random()*5)];
   S.density=Math.floor(Math.random()*80)+10;S.scale=Math.round((Math.random()*2+0.3)*100)/100;S.rotation=Math.floor(Math.random()*360);S.noise=Math.round(Math.random()*100)/100;
@@ -1035,16 +958,11 @@ function init(){
       case'e':if(!e.ctrlKey&&!e.metaKey){e.preventDefault();exportPNG();}break;
       case'z':if(e.ctrlKey||e.metaKey){e.preventDefault();undo();}break;
       case'1':S.layout='vortex';syncAll();draw();saveURL();break;
-      case'2':S.layout='mondrian';syncAll();draw();saveURL();break;
-      case'3':S.layout='galaxy';syncAll();draw();saveURL();break;
+      case'2':S.layout='geometric';syncAll();draw();saveURL();break;
+      case'3':S.layout='flowfield';syncAll();draw();saveURL();break;
       case'4':S.layout='kaleidoscope';syncAll();draw();saveURL();break;
-      case'5':S.layout='fluid';syncAll();draw();saveURL();break;
-      case'6':S.layout='ripple';syncAll();draw();saveURL();break;
-      case'7':S.layout='fractal';syncAll();draw();saveURL();break;
-      case'8':S.layout='geodesic';syncAll();draw();saveURL();break;
-      case'9':S.layout='bloom';syncAll();draw();saveURL();break;
-      case'0':S.layout='circuit';syncAll();draw();saveURL();break;
-      case'-':S.layout='poster';syncAll();draw();saveURL();break;
+      case'5':S.layout='cells';syncAll();draw();saveURL();break;
+      case'6':S.layout='layers';syncAll();draw();saveURL();break;
       case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
     }
   });
