@@ -8,7 +8,10 @@ function init(cb){load();cb(null,u);}
 
 function register(email,pw,cb){
   u={e:email,p:pw,c:3,t:'free',r:'R'+String(Date.now()).slice(-6)};
-  save();cb(null,u);
+  save();
+  var check=load();
+  if(!check||check.e!==email){cb('save failed',null);return;}
+  cb(null,u);
 }
 
 function login(email,pw,cb){
