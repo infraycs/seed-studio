@@ -20,8 +20,8 @@ exports.main=async function(e){
         var sign=require('crypto').createHash('md5').update(tk+'params'+p+'ts'+ts+'user_id'+uid2).digest('hex');
         var https=require('https'),data=await new Promise(function(rs,rj){var rq=https.request({hostname:'afdian.net',port:443,path:'/api/open/query-order',method:'POST',headers:{'Content-Type':'application/json'}},function(res){var b='';res.on('data',function(c){b+=c});res.on('end',function(){rs(JSON.parse(b))});});rq.on('error',rj);rq.write(JSON.stringify({user_id:uid2,params:p,ts:ts,sign:sign}));rq.end();});
         if(data.ec===200&&data.data&&data.data.list){for(var i=0;i<data.data.list.length;i++){var o=data.data.list[i];if(o.out_trade_no===d.oid&&o.status===2){var key='PRO-'+require('crypto').randomBytes(6).toString('hex').toUpperCase();await db.collection('keys').add({oid:d.oid,key:key});return ok({key:key});}}}
-        return err('not found');
-      }catch(ex){return err('verify failed: '+ex.message);}
+        return err('order not found or unpaid');
+      }catch(ex){return err('order not found');}
     }
     return err('bad action');
   }catch(ex){return err(ex.message,500);}
