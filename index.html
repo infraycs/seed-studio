@@ -844,18 +844,18 @@ function init(){
   document.getElementById('btnSave').addEventListener('click',saveSet);
   document.getElementById('btnLoad').addEventListener('click',function(){document.getElementById('fileInput').click();});
   document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadSet(e.target.files[0]);e.target.value='';});
-  document.getElementById('btnUpgrade').addEventListener('click',function(){window.open('https://afdian.net/@Seed%20Studio','_blank');});
-  document.getElementById('btnLifetime').addEventListener('click',function(){window.open('https://afdian.net/@Seed%20Studio','_blank');});
+  document.getElementById('btnUpgrade').addEventListener('click',function(){window.open('https://afdian.com/a/seedstudio','_blank');});
+  document.getElementById('btnLifetime').addEventListener('click',function(){window.open('https://afdian.com/a/seedstudio','_blank');});
   document.getElementById('btnCloseModal').addEventListener('click',hidePayModal);
   document.getElementById('payModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hidePayModal();});
   document.getElementById('btnGoPay').addEventListener('click',function(){
     var plan=document.getElementById('payPrice').dataset.plan||'lifetime';
-    window.open('https://afdian.net/@Seed%20Studio','_blank');
+    window.open('https://afdian.com/a/seedstudio','_blank');
     toast('💳 请在爱发电完成付款后，回到这里粘贴订单号激活');
   });
   // Payment modal: close button
   document.getElementById('btnGoPay').addEventListener('click',function(){
-    window.open('https://afdian.net/@Seed%20Studio','_blank');
+    window.open('https://afdian.com/a/seedstudio','_blank');
     toast('💳 完成付款后，在登录弹窗输入订单号查询 License Key');
   });
 
