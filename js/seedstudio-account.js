@@ -23,7 +23,10 @@ function register(email,password,inviteCode,cb){
 }
 
 function login(email,password,cb){
-  var u=load();if(!u){cb('账号不存在，请先注册',null);return;}
+  var raw=localStorage.getItem('ss_u');
+  if(!raw){cb('账号不存在(存储为空)，请先注册',null);return;}
+  var u;try{u=JSON.parse(raw);}catch(e){cb('数据损坏，请重新注册',null);return;}
+  if(u.em!==email){cb('账号不存在(邮箱不匹配: '+u.em+')，请先注册',null);return;}
   if(u.pw!==password){cb('密码错误',null);return;}
   currentUser=u;creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';cb(null,u);
 }
