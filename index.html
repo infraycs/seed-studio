@@ -771,14 +771,14 @@ function exportPNG(){
   }
 
   // Credit check for logged-in users
-  if(window.SeedStudioAccount&&window.SeedStudioAccount.isLoggedIn&&S.tier!=='pro'){
-    if(window.SeedStudioAccount.creditBalance>0){
-      window.SeedStudioAccount.deductCredit(1,'export',function(err){
+  if(window.SS&&window.SS.isLoggedIn&&S.tier!=='pro'){
+    if(window.SS.creditBalance>0){
+      window.SS.deductCredit(1,'export',function(err){
         if(err){toast('❌ '+err);return;}
         updateAccountUI(); doExport();
       });
     } else {
-      var link=window.SeedStudioAccount.getReferralLink();
+      var link=window.SS.getReferralLink();
       if(confirm('积分不足！\n\n点确定复制邀请链接\n分享给好友双方各得 +2 积分\n\n或前往爱发电充值')){
         navigator.clipboard.writeText(link); toast('📋 邀请链接已复制！');
       }
@@ -893,11 +893,11 @@ function init(){
 
   // Account UI
   function updateAccountUI(){
-    var d=document.getElementById('creditDisplay'),b=document.getElementById('btnAccount'),a=window.SeedStudioAccount;
-    if(a&&a.isLoggedIn){
-      d.textContent='💰 '+(a.membershipTier==='pro'?'无限':a.creditBalance);
+    var d=document.getElementById('creditDisplay'),b=document.getElementById('btnAccount'),a=window.SS;
+    if(a&&a.loggedIn){
+      d.textContent='💰 '+(a.ti==='pro'?'无限':a.cr);
       b.textContent='👤 已登录';
-      if(a.membershipTier==='pro'){S.tier='pro';syncAll();draw();}
+      if(a.ti==='pro'){S.tier='pro';syncAll();draw();}
     }else{
       d.textContent='';b.textContent='🌱 创建账号';
       S.tier='free';
@@ -921,8 +921,8 @@ function init(){
 
   // Create
   document.getElementById('btnCreateWallet').addEventListener('click',function(){
-    var a=window.SeedStudioAccount;if(!a){toast('系统加载中');return;}
-    a.createAccount(function(err,r){
+    var a=window.SS;if(!a){toast('系统加载中');return;}
+    a.create(function(err,r){
       if(err){toast('❌ '+err);return;}
       document.getElementById('shortCode').textContent=r.id;
       document.getElementById('fullCodeDisplay').textContent=r.fullCode;
@@ -942,12 +942,12 @@ function init(){
   document.getElementById('btnRestoreAcc').addEventListener('click',function(){
     var c=document.getElementById('restoreCode').value.trim();
     if(!c){toast('请输入账号码');return;}
-    var a=window.SeedStudioAccount;
-    a.restoreFromCode(c,function(err,u){
+    var a=window.SS;
+    a.login(c,function(err,u){
       if(err){toast('❌ '+err);return;}
       hideLoginModal();updateAccountUI();
-      document.getElementById('codeHint').textContent=a.getAccountId();
-      toast('✅ 登录成功！积分: '+a.creditBalance);
+      document.getElementById('codeHint').textContent=a.getId();
+      toast('✅ 登录成功！积分: '+a.cr);
     });
   });
 
@@ -973,13 +973,13 @@ function init(){
   document.getElementById('btnActivateLicense2').addEventListener('click',function(){
     var k=document.getElementById('licenseInput2').value.trim();
     if(!k){toast('请输入 License Key');return;}
-    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先登录');return;}
+    var a=window.SS;if(!a||!a.loggedIn){toast('请先登录');return;}
     if(k.length>=6){a.activatePro();S.tier='pro';syncAll();draw();updateAccountUI();toast('🎉 Pro 已激活！无限导出');}
   });
 
   document.getElementById('btnAccount').addEventListener('click',function(){
-    var a=window.SeedStudioAccount;
-    if(a&&a.isLoggedIn){a.logout(function(){});updateAccountUI();toast('已退出');}
+    var a=window.SS;
+    if(a&&a.loggedIn){a.logout(function(){});updateAccountUI();toast('已退出');}
     else showLoginModal();
   });
   updateAccountUI();
