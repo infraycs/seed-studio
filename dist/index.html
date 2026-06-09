@@ -454,6 +454,16 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       <div class="field" id="regError" style="display:none;font-size:0.65rem;color:var(--accent);"></div>
       <button type="button" class="submit-btn" id="btnRegister">注册</button>
     </div>
+    <div id="accountPanel2" style="display:none;">
+      <div style="text-align:center;padding:8px 0;">
+        <div id="accountEmail" style="font-weight:700;font-size:0.85rem;"></div>
+        <div id="accountCredits" style="font-size:0.75rem;color:var(--accent2);margin-top:4px;"></div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <button type="button" id="btnAccountLogout" style="padding:6px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;font-size:0.7rem;">退出登录</button>
+        <button type="button" id="btnAccountClose" style="padding:6px 16px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">关闭</button>
+      </div>
+    </div>
     <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
       <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro · 全自动</div>
       <div style="display:flex;gap:6px;margin-bottom:6px;">
@@ -873,15 +883,32 @@ function init(){
   }
 
   // ═══ LOGIN MODAL ═══
-  function showLoginModal(){document.getElementById("loginModal").classList.add("show");}
+  function showLoginModal(){
+    document.getElementById("loginModal").classList.add("show");
+    if(SS.loggedIn){showAccountPanel();}
+    else{document.getElementById("loginPanel2").style.display="block";document.getElementById("registerPanel2").style.display="none";document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").classList.add("active");document.getElementById("tabRegisterBtn").classList.remove("active");}
+  }
   function hideLoginModal(){document.getElementById("loginModal").classList.remove("show");}
+  function showAccountPanel(){
+    document.getElementById("loginPanel2").style.display="none";
+    document.getElementById("registerPanel2").style.display="none";
+    document.getElementById("accountPanel2").style.display="block";
+    document.getElementById("tabLoginBtn").style.display="none";
+    document.getElementById("tabRegisterBtn").style.display="none";
+    document.getElementById("accountEmail").textContent=localStorage.getItem("ss_em")||"";
+    document.getElementById("accountCredits").textContent=SS.ti==="pro"?"💰 Pro 无限":"💰 "+SS.cr+" 积分";
+  }
   document.getElementById("loginModal").addEventListener("click",function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
+  var elAL=document.getElementById("btnAccountLogout");if(elAL)elAL.addEventListener("click",function(){SS.logout();hideLoginModal();updateAccountUI();toast("已退出");});
+  var elAC=document.getElementById("btnAccountClose");if(elAC)elAC.addEventListener("click",function(){hideLoginModal();});
+
   document.getElementById("tabLoginBtn").addEventListener("click",function(){
-    document.getElementById("loginPanel2").style.display="block";document.getElementById("registerPanel2").style.display="none";
+    document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").style.display="";document.getElementById("tabRegisterBtn").style.display="";
     document.getElementById("tabLoginBtn").classList.add("active");document.getElementById("tabRegisterBtn").classList.remove("active");
   });
   document.getElementById("tabRegisterBtn").addEventListener("click",function(){
+    document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").style.display="";document.getElementById("tabRegisterBtn").style.display="";
     document.getElementById("loginPanel2").style.display="none";document.getElementById("registerPanel2").style.display="block";
     document.getElementById("tabRegisterBtn").classList.add("active");document.getElementById("tabLoginBtn").classList.remove("active");
   });
@@ -891,14 +918,14 @@ function init(){
   document.getElementById("btnLogin").addEventListener("click",function(){
     var em=document.getElementById("loginEmail").value.trim(),pw=document.getElementById("loginPassword").value;
     if(!em||!pw){err("loginError","need email+password");return;}
-    SS.login(em,pw,function(e,r){if(e){err("loginError",e);return;}hideLoginModal();updateAccountUI();toast("logged in! "+SS.cr+" credits");});
+    SS.login(em,pw,function(e,r){if(e){err("loginError",e);return;}showAccountPanel();updateAccountUI();toast("logged in! "+SS.cr+" credits");});
   });
 
   document.getElementById("btnRegister").addEventListener("click",function(){
     var em=document.getElementById("regEmail").value.trim(),pw=document.getElementById("regPassword").value;
     if(!em||!pw){err("regError","need email+password");return;}
     if(pw.length<6){err("regError","password too short");return;}
-    SS.register(em,pw,function(e,r){if(e){err("regError",e);return;}hideLoginModal();updateAccountUI();toast("registered! 3 credits");});
+    SS.register(em,pw,function(e,r){if(e){err("regError",e);return;}showAccountPanel();updateAccountUI();toast("registered! 3 credits");});
   });
 
   document.getElementById("btnLookupOrder").addEventListener("click",function(){
