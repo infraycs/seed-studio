@@ -986,36 +986,34 @@ function init(){
     };r.readAsText(f);
   });
 
-  // Order → License Key lookup → Worker API
-  document.getElementById('btnLookupOrder').addEventListener('click',function(){
-    var orderId=document.getElementById('orderLookup').value.trim();
-    if(!orderId){toast('请输入爱发电订单号');return;}
-    var res=document.getElementById('lookupResult');var a=window.SeedStudioAccount;
-    res.style.display='block';res.style.background='var(--bg)';res.style.color='var(--muted)';res.textContent='查询中...';
-    a.verifyPayment(orderId,function(err,key){
-      if(err){res.style.background='rgba(255,107,107,0.1)';res.style.color='var(--accent)';res.textContent=err;return;}
-      res.style.background='rgba(78,205,196,0.1)';res.style.color='var(--accent2)';
-      res.innerHTML='🎉 License Key:<br><strong style=\"font-size:1rem;letter-spacing:0.05em;\">'+key+'</strong>';
-      document.getElementById('licenseInput2').value=key;
-    });
-  });
+  // License key activation (local HMAC check)
+  var VALID_LICENSE_HASHES=[
+    'b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a',
+    'c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e',
+    '91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0',
+  ];
 
-  // License key activation → Worker API
-  document.getElementById('btnActivateLicense2').addEventListener('click',function(){
+  document.getElementById('btnActivateLicense2').addEventListener('click',async function(){
     var key=document.getElementById('licenseInput2').value.trim();
     if(!key){toast('请输入 License Key');return;}
-    var a=window.SeedStudioAccount;
-    if(!a||!a.isLoggedIn){toast('请先登录');return;}
-    // Verify key via Worker, then upgrade
-    a.verifyPayment(key,function(err,validKey){
-      if(err){toast('❌ '+err);return;}
-      a.upgradeUser(a.currentUser.email,'pro',function(e2){
-        if(e2){toast('❌ '+e2);return;}
-        S.tier='pro';syncAll();draw();updateAccountUI();
-        document.getElementById('licenseInput2').value='';
-        toast('🎉 Pro 已激活！无限导出');
-      });
-    });
+    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先登录');return;}
+    var d=new TextEncoder().encode(key.toUpperCase().trim());
+    var h=await crypto.subtle.digest('SHA-256',d);
+    var hex=Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    if(VALID_LICENSE_HASHES.includes(hex)){
+      a.currentUser.ti='pro';a.currentUser.cr=999;membershipTier='pro';creditBalance=999;
+      S.tier='pro';syncAll();draw();updateAccountUI();
+      document.getElementById('licenseInput2').value='';
+      toast('🎉 Pro 已激活！');
+    }else{toast('❌ 无效的 License Key');}
+  });
+
+  // Order lookup (manual — seller sends key)
+  document.getElementById('btnLookupOrder').addEventListener('click',function(){
+    document.getElementById('lookupResult').style.display='block';
+    document.getElementById('lookupResult').style.background='rgba(255,107,107,0.1)';
+    document.getElementById('lookupResult').style.color='var(--accent2)';
+    document.getElementById('lookupResult').innerHTML='付款后联系客服获取 License Key<br><small style=\"color:var(--muted);\">或发邮件到 seedstudio@proton.me</small>';
   });
 
   document.getElementById('btnAccount').addEventListener('click',function(){

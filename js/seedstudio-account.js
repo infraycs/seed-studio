@@ -1,74 +1,73 @@
-var API='https://odd-sky-4c45.402741165.workers.dev';
-var token=localStorage.getItem('ss_token')||'';
+/**
+ * SeedStudio Account — localStorage + HMAC
+ * Fixed secret — no more "data corrupted" errors
+ */
+(function(global){
+'use strict';
+
+var SECRET='seedstudio_fixed_secret_k9m2x7v4';
+
+async function hmacSign(data){
+  var enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+async function sha256(str){var d=new TextEncoder().encode(str);var h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+
 var currentUser=null,creditBalance=0,membershipTier='free',referralCode='';
 
-function api(method,path,body){
-  var opts={method:method,headers:{'Content-Type':'application/json'}};
-  if(token)opts.headers['Authorization']='Bearer '+token;
-  if(body)opts.body=JSON.stringify(body);
-  return fetch(API+path,opts).then(function(r){return r.json();});
-}
-
-function init(callback){
-  if(!token){callback(null,null);return;}
-  api('GET','/me').then(function(u){
-    if(u.error){token='';localStorage.removeItem('ss_token');callback(null,null);return;}
-    currentUser={email:u.email};creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';
-    callback(null,u);
-  }).catch(function(){callback(null,null);});
-}
-
-function register(email,password,inviteCode,callback){
-  api('POST','/register',{email:email,password:password,inviteCode:inviteCode||''}).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    token=r.token;localStorage.setItem('ss_token',token);currentUser={email:email};creditBalance=r.cr;membershipTier=r.ti;referralCode=r.rc;
+async function init(callback){
+  try{
+    var raw=localStorage.getItem('ss_user');
+    if(!raw){callback(null,null);return;}
+    var p=raw.split('.');if(p.length!==2){localStorage.removeItem('ss_user');callback(null,null);return;}
+    if(await hmacSign(p[0])!==p[1]){localStorage.removeItem('ss_user');callback(null,null);return;}
+    currentUser=JSON.parse(p[0]);creditBalance=currentUser.cr||0;membershipTier=currentUser.ti||'free';referralCode=currentUser.rc||'';
     callback(null,currentUser);
-  }).catch(function(e){callback('网络错误: '+e.message,null);});
+  }catch(e){localStorage.removeItem('ss_user');callback(null,null);}
 }
 
-function login(email,password,callback){
-  api('POST','/login',{email:email,password:password}).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    token=r.token;localStorage.setItem('ss_token',token);currentUser={email:email};creditBalance=r.cr;membershipTier=r.ti;referralCode=r.rc;
-    callback(null,currentUser);
-  }).catch(function(e){callback('网络错误: '+e.message,null);});
+async function save(){if(!currentUser)return;currentUser.up=Date.now();var d=JSON.stringify(currentUser),s=await hmacSign(d);localStorage.setItem('ss_user',d+'.'+s);}
+
+async function register(email,password,inviteCode,callback){
+  if(localStorage.getItem('ss_user')){callback('已有账号，请退出后重新注册',null);return;}
+  var u={id:'u'+Date.now().toString(36),em:email,ph:await sha256(password+SECRET),cr:3,ti:'free',rc:'S'+Math.random().toString(36).substring(2,8).toUpperCase(),ib:inviteCode||'',ct:new Date().toISOString()};
+  currentUser=u;creditBalance=3;membershipTier='free';referralCode=u.rc;await save();
+  if(inviteCode)await processReferral(inviteCode);
+  callback(null,u);
 }
 
-function logout(callback){token='';localStorage.removeItem('ss_token');currentUser=null;creditBalance=0;membershipTier='free';referralCode='';callback(null);}
-
-function refreshCredits(callback){
-  api('GET','/me').then(function(u){if(u.error){callback(u.error,null);return;}creditBalance=u.cr||0;membershipTier=u.ti||'free';callback(null,{credits:creditBalance,tier:membershipTier});}).catch(function(e){callback(e.message,null);});
+async function login(email,password,callback){
+  var raw=localStorage.getItem('ss_user');if(!raw){callback('账号不存在，请先注册',null);return;}
+  var p=raw.split('.');if(await hmacSign(p[0])!==p[1]){localStorage.removeItem('ss_user');callback('数据异常，请重新注册',null);return;}
+  var u=JSON.parse(p[0]);if(u.ph!==await sha256(password+SECRET)){callback('密码错误',null);return;}
+  currentUser=u;creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';callback(null,u);
 }
 
-function deductCredit(amount,reason,callback){
-  api('POST','/deduct',{amount:amount||1}).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    creditBalance=r.rm;callback(null,{deducted:amount,remaining:r.rm,unlimited:r.ul});
-  }).catch(function(e){callback('网络错误: '+e.message,null);});
+function logout(callback){currentUser=null;creditBalance=0;membershipTier='free';referralCode='';callback(null);}
+
+async function deductCredit(amount,reason,callback){
+  if(!currentUser){callback('请先登录',null);return;}
+  if(membershipTier==='pro'||membershipTier==='lifetime'){callback(null,{deducted:0,remaining:creditBalance,unlimited:true});return;}
+  if(creditBalance<(amount||1)){callback('积分不足！',null);return;}
+  currentUser.cr=(currentUser.cr||0)-(amount||1);creditBalance=currentUser.cr;await save();
+  callback(null,{deducted:amount||1,remaining:creditBalance});
 }
 
-function verifyPayment(orderId,callback){
-  api('POST','/order',{orderId:orderId}).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    callback(null,r.key);
-  }).catch(function(e){callback(e.message,null);});
-}
-
-function upgradeUser(email,tier,callback){
-  api('POST','/upgrade',{email:email,tier:tier||'pro'}).then(function(r){
-    if(r.error){callback(r.error,null);return;}
-    if(currentUser&&currentUser.email===email){membershipTier=r.ti||'pro';creditBalance=999;if(typeof S!=='undefined')S.tier='pro';}
-    callback(null,r);
-  }).catch(function(e){callback(e.message,null);});
+async function processReferral(inviteCode){
+  var raw=localStorage.getItem('ss_user');if(!raw)return;var u=JSON.parse(raw.split('.')[0]);
+  if(u.rc===inviteCode){u.cr=(u.cr||0)+2;var s=await hmacSign(JSON.stringify(u));localStorage.setItem('ss_user',JSON.stringify(u)+'.'+s);}
+  if(currentUser){currentUser.cr=(currentUser.cr||0)+2;creditBalance=currentUser.cr;await save();}
 }
 
 function getReferralLink(){return referralCode?'https://www.seedstudio.top/?ref='+referralCode:'';}
+function refreshCredits(cb){if(!currentUser){cb('Not logged in',null);return;}cb(null,{credits:creditBalance,tier:membershipTier});}
 
-window.SeedStudioAccount={
+global.SeedStudioAccount={
   init:init,register:register,login:login,logout:logout,refreshCredits:refreshCredits,
-  deductCredit:deductCredit,verifyPayment:verifyPayment,upgradeUser:upgradeUser,
-  getReferralLink:getReferralLink,
+  deductCredit:deductCredit,getReferralLink:getReferralLink,
   get currentUser(){return currentUser;},get creditBalance(){return creditBalance;},
   get membershipTier(){return membershipTier;},get referralCode(){return referralCode;},
-  get isLoggedIn(){return!!currentUser&&!!token;},
+  get isLoggedIn(){return!!currentUser;},
 };
+})(window);
