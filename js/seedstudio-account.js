@@ -7,12 +7,13 @@
 
 var SECRET='seedstudio_fixed_secret_k9m2x7v4';
 
-async function hmacSign(data){
-  var enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-  var sig=await crypto.subtle.sign('HMAC',key,enc.encode(data));
-  return Array.from(new Uint8Array(sig)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+function simpleHash(str){
+  var hash=0,i,chr;
+  for(i=0;i<str.length;i++){chr=str.charCodeAt(i);hash=((hash<<5)-hash)+chr;hash|=0;}
+  return (hash>>>0).toString(16);
 }
-async function sha256(str){var d=new TextEncoder().encode(str);var h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+function hmacSign(data){return Promise.resolve(simpleHash(SECRET+data));}
+function sha256(str){return Promise.resolve(simpleHash(str+SECRET));}
 
 var currentUser=null,creditBalance=0,membershipTier='free',referralCode='';
 
