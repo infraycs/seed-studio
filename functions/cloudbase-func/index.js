@@ -4,7 +4,8 @@ const app = cloudbase.init({env: cloudbase.SYMBOL_CURRENT_ENV});
 const db = app.database();
 
 exports.main = async function(e){
-  var a=e.action, d=e.data||{};
+  var body=typeof e.body==='string'?JSON.parse(e.body):(e.body||e);
+  var a=body.action||e.action, d=body.data||e.data||{};
   if(a==='ping') return {ok:1};
   if(a==='reg'){
     var ex=await db.collection('users').where({email:d.e}).count();
