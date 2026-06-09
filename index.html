@@ -437,26 +437,39 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <!-- ═══════ LOGIN MODAL ═══════ -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal login-modal">
-    <h3 style="margin-bottom:12px;">🌱 创建账号</h3>
-    <p style="font-size:0.7rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">点击创建 → 复制账号码 → 保存到任何地方<br>换设备时粘贴账号码即可恢复</p>
-    <button type="button" class="submit-btn" id="btnCreateWallet">🎁 创建账号 · 得 3 积分</button>
-    <div id="walletBox" style="display:none;margin-top:12px;padding:12px;background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:var(--radius-sm);">
-      <div style="font-size:0.62rem;color:var(--accent2);margin-bottom:2px;">🔑 你的账号码 · 妥善保存</div>
-      <div id="walletCode" style="font-size:0.6rem;color:var(--text);word-break:break-all;font-family:monospace;margin:6px 0;line-height:1.4;"></div>
-      <button type="button" class="btn btn-outline" id="btnCopyCode" style="font-size:0.6rem;width:100%;">📋 复制账号码</button>
+    <div class="tab-row">
+      <button class="active" id="tabCreateBtn">✨ 创建</button>
+      <button id="tabLoginBtn">🔐 登录</button>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
-      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">已有账号码？恢复</div>
-      <div style="display:flex;gap:6px;">
-        <input type="text" id="restoreCode" placeholder="粘贴账号码" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
-        <button type="button" id="btnRestoreAcc" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">恢复</button>
+    <div id="createPanel">
+      <p style="font-size:0.7rem;color:var(--muted);margin:12px 0;">创建后获得 8 位短码和完整备份码</p>
+      <button type="button" class="submit-btn" id="btnCreateWallet">🎁 创建账号 · 得 3 积分</button>
+      <div id="walletBox" style="display:none;margin-top:12px;padding:12px;background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:var(--radius-sm);">
+        <div style="font-size:0.62rem;color:var(--accent2);margin-bottom:4px;">🔑 账号码 (8位)</div>
+        <div id="shortCode" style="font-size:1.2rem;font-weight:700;color:var(--accent2);letter-spacing:0.1em;font-family:monospace;margin:4px 0;"></div>
+        <button type="button" class="btn btn-outline" id="btnCopyCode" style="font-size:0.6rem;width:100%;margin-top:6px;">📋 复制账号码</button>
+        <div style="font-size:0.58rem;color:var(--muted);margin-top:8px;line-height:1.4;">
+          ⚠️ 换设备恢复需要<span style="color:var(--accent2);">完整备份码</span><br>
+          <span id="fullCodeDisplay" style="font-size:0.5rem;word-break:break-all;font-family:monospace;color:var(--muted);"></span>
+          <button type="button" class="btn btn-outline" id="btnCopyFullCode" style="font-size:0.55rem;padding:3px 8px;margin-top:4px;">📋 复制完整码</button>
+        </div>
       </div>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
-      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">💳 License Key 激活 Pro</div>
+    <div id="loginPanel" style="display:none;">
+      <p style="font-size:0.7rem;color:var(--muted);margin:12px 0;">粘贴 8 位账号码或完整备份码</p>
       <div style="display:flex;gap:6px;">
+        <input type="text" id="restoreCode" placeholder="SSK9X2M7 或完整备份码" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.8rem;font-family:monospace;">
+        <button type="button" id="btnRestoreAcc" style="padding:10px 16px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.75rem;">登录</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro</div>
+      <p style="font-size:0.6rem;color:var(--muted);line-height:1.5;">
+        去爱发电付款 → 在备注里填写你的 <strong style="color:var(--accent2);" id="codeHint">8位账号码</strong> → 卖家验证后给你 License Key → 在下方激活
+      </p>
+      <div style="display:flex;gap:6px;margin-top:8px;">
         <input type="text" id="licenseInput2" placeholder="粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
-        <button type="button" id="btnActivateLicense2" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
+        <button type="button" id="btnActivateLicense2" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
       </div>
     </div>
   </div>
@@ -884,44 +897,59 @@ function init(){
     }
   }
 
-  // ═══ LOGIN MODAL (Wallet) ═══
+  // ═══ LOGIN MODAL ═══
   function showLoginModal(){document.getElementById('loginModal').classList.add('show');}
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
   document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
-  // Create wallet
+  // Tab switching
+  document.getElementById('tabCreateBtn').addEventListener('click',function(){
+    document.getElementById('createPanel').style.display='block';document.getElementById('loginPanel').style.display='none';
+    document.getElementById('tabCreateBtn').classList.add('active');document.getElementById('tabLoginBtn').classList.remove('active');
+  });
+  document.getElementById('tabLoginBtn').addEventListener('click',function(){
+    document.getElementById('createPanel').style.display='none';document.getElementById('loginPanel').style.display='block';
+    document.getElementById('tabLoginBtn').classList.add('active');document.getElementById('tabCreateBtn').classList.remove('active');
+  });
+
+  // Create
   document.getElementById('btnCreateWallet').addEventListener('click',function(){
     var a=window.SeedStudioAccount;if(!a){toast('系统加载中');return;}
     a.createAccount(function(err,r){
       if(err){toast('❌ '+err);return;}
-      document.getElementById('walletCode').textContent=r.code;
+      document.getElementById('shortCode').textContent=r.id;
+      document.getElementById('fullCodeDisplay').textContent=r.fullCode;
       document.getElementById('walletBox').style.display='block';
-      updateAccountUI();toast('🎉 账号已创建！积分: '+r.credits);
+      document.getElementById('codeHint').textContent=r.id;
+      updateAccountUI();toast('🎉 创建成功！积分: '+r.credits);
     });
   });
 
-  // Copy code
+  // Copy short & full
   document.getElementById('btnCopyCode').addEventListener('click',function(){
-    navigator.clipboard.writeText(document.getElementById('walletCode').textContent).then(function(){toast('📋 已复制！请保存到安全的地方');});
-  });
+    navigator.clipboard.writeText(document.getElementById('shortCode').textContent);toast('📋 已复制账号码');});
+  document.getElementById('btnCopyFullCode').addEventListener('click',function(){
+    navigator.clipboard.writeText(document.getElementById('fullCodeDisplay').textContent);toast('📋 完整码已复制');});
 
-  // Restore from code
+  // Login (restore)
   document.getElementById('btnRestoreAcc').addEventListener('click',function(){
     var c=document.getElementById('restoreCode').value.trim();
-    if(!c){toast('请粘贴账号码');return;}
+    if(!c){toast('请输入账号码');return;}
     var a=window.SeedStudioAccount;
     a.restoreFromCode(c,function(err,u){
       if(err){toast('❌ '+err);return;}
-      hideLoginModal();updateAccountUI();toast('✅ 已恢复！积分: '+a.creditBalance);
+      hideLoginModal();updateAccountUI();
+      document.getElementById('codeHint').textContent=a.getAccountId();
+      toast('✅ 登录成功！积分: '+a.creditBalance);
     });
   });
 
-  // License key
+  // License activate
   document.getElementById('btnActivateLicense2').addEventListener('click',function(){
     var k=document.getElementById('licenseInput2').value.trim();
     if(!k){toast('请输入 License Key');return;}
-    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先创建/恢复账号');return;}
-    if(k.length>=6){a.activatePro();S.tier='pro';syncAll();draw();updateAccountUI();toast('🎉 Pro 已激活！');}
+    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先登录');return;}
+    if(k.length>=6){a.activatePro();S.tier='pro';syncAll();draw();updateAccountUI();toast('🎉 Pro 已激活！无限导出');}
   });
 
   document.getElementById('btnAccount').addEventListener('click',function(){
