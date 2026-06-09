@@ -7,7 +7,7 @@ function load(){
   var r=localStorage.getItem('ss_u');if(!r)return null;
   try{return JSON.parse(r);}catch(e){return null;}
 }
-function save(u){localStorage.setItem('ss_u',JSON.stringify(u));}
+function save(u){try{localStorage.setItem('ss_u',JSON.stringify(u));return true;}catch(e){console.error('localStorage save failed:',e);return false;}}
 
 function init(cb){
   currentUser=load();
@@ -17,7 +17,8 @@ function init(cb){
 
 function register(email,password,inviteCode,cb){
   var u={em:email,pw:password,cr:3,ti:'free',rc:'S'+Date.now().toString(36).slice(-6).toUpperCase(),ib:inviteCode||''};
-  save(u);currentUser=u;creditBalance=3;membershipTier='free';referralCode=u.rc;
+  var ok=save(u);if(!ok){cb('存储失败！请检查浏览器设置（不要用无痕模式）',null);return;}
+  currentUser=u;creditBalance=3;membershipTier='free';referralCode=u.rc;
   if(inviteCode){var old=load();if(old&&old.rc===inviteCode){old.cr=(old.cr||0)+2;save(old);u.cr+=2;creditBalance=u.cr;save(u);}}
   cb(null,u);
 }
