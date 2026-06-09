@@ -29,7 +29,31 @@ exports.main = async function(e){
   if(a==='upgrade'){await db.collection('users').doc(d.id).update({ti:'pro',cr:999});return{ok:1};}
   if(a==='lookup'){
     var r=await db.collection('keys').where({oid:d.oid}).get();
-    return r.data.length?{ok:1,key:r.data[0].key}:{error:'not found'};
+    if(r.data.length) return{ok:1,key:r.data[0].key};
+    // Auto-check 爱发电 if not cached
+    try{
+      const ts=Math.floor(Date.now()/1000);
+      const uid2='5741d9da011b11efb33152540025c377';
+      const tk='WJaK3djBgPCtX8xsYmVeG5kQAn7TDfMN';
+      const p=JSON.stringify({page:1,per_page:30});
+      const sign=require('crypto').createHash('md5').update(tk+'params'+p+'ts'+ts+'user_id'+uid2).digest('hex');
+      const https=require('https');
+      const data=await new Promise(function(rs,rj){
+        var req=https.request({hostname:'afdian.net',port:443,path:'/api/open/query-order',method:'POST',headers:{'Content-Type':'application/json'}},function(res){var b='';res.on('data',function(c){b+=c});res.on('end',function(){rs(JSON.parse(b))});});
+        req.on('error',rj);req.write(JSON.stringify({user_id:uid2,params:p,ts:ts,sign:sign}));req.end();
+      });
+      if(data.ec===200&&data.data&&data.data.list){
+        for(var i=0;i<data.data.list.length;i++){
+          var o=data.data.list[i];
+          if(o.out_trade_no===d.oid&&o.status===2){
+            var key='PRO-'+require('crypto').randomBytes(6).toString('hex').toUpperCase();
+            await db.collection('keys').add({oid:d.oid,key:key});
+            return{ok:1,key:key};
+          }
+        }
+      }
+      return{error:'not paid or not found'};
+    }catch(err){return{error:'verify failed: '+err.message};}
   }
   return {error:'bad action'};
 };
