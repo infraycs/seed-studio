@@ -602,13 +602,27 @@ function drawVignette(p,pal){
 
 function drawWatermark(p,pal){
   if(S.tier==='pro')return;
-  var lt=isLight(pal),ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
-  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif';
-  ctx.fillStyle=lt?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.12)';ctx.textAlign='center';
-  ctx.fillText('Seed Studio · 种子画室',S.W/2,S.H-fs*0.8);
-  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif';
-  ctx.fillStyle=lt?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.08)';
-  ctx.fillText('seedstudio.top',S.W/2,S.H-fs*0.1);
+  var lt=isLight(pal),ctx=p.drawingContext;
+  // Tiled diagonal watermark — prominent on canvas
+  var gap=Math.min(S.W,S.H)*0.15,txt='Seed Studio',fs=Math.min(S.W*0.05,22);
+  ctx.save();ctx.font='bold '+fs+'px "Segoe UI",system-ui,sans-serif';
+  ctx.fillStyle=lt?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.08)';ctx.textAlign='center';
+  for(var y=-gap;y<S.H+gap;y+=gap){
+    for(var x=-gap;x<S.W+gap;x+=gap){
+      ctx.save();ctx.translate(x,y);ctx.rotate(-0.35);
+      ctx.fillText(txt,0,0);ctx.restore();
+    }
+  }
+  ctx.restore();
+  // Bottom bar with brand
+  var barH=Math.min(S.H*0.06,32);
+  ctx.fillStyle=lt?'rgba(0,0,0,0.12)':'rgba(0,0,0,0.45)';
+  ctx.fillRect(0,S.H-barH,S.W,barH);
+  ctx.font=(fs*0.5)+'px "Segoe UI",system-ui,sans-serif';
+  ctx.fillStyle=lt?'rgba(0,0,0,0.6)':'rgba(255,255,255,0.5)';ctx.textAlign='left';
+  ctx.fillText('🌱 Seed Studio · 种子画室 — 免费版',12,S.H-barH/2+fs*0.2);
+  ctx.fillStyle=lt?'rgba(0,0,0,0.35)':'rgba(255,255,255,0.25)';ctx.textAlign='right';
+  ctx.fillText('升级 Pro 去水印 → seedstudio.top',S.W-12,S.H-barH/2+fs*0.2);
 }
 
 // Shape drawing with organic perturbation (Hobbs principle: imperfect geometry)
