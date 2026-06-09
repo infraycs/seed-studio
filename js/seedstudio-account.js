@@ -3,7 +3,7 @@
  */
 (function(global){
 'use strict';
-var API='CLOUDBASE_HTTP_URL'; // User replaces this
+var API='https://seedstudio-d6gcgy3nwa8b4e1ca-1323980712.ap-shanghai.app.tcloudbase.com/api';
 var uid='',cr=0,ti='free';
 
 function call(action,data){return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,data:data||{}})}).then(function(r){return r.json();});}
