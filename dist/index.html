@@ -465,12 +465,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       </div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
-      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro · 全自动</div>
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input type="text" id="orderLookup" placeholder="爱发电订单号" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
-        <button type="button" id="btnLookupOrder" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">查询 Key</button>
-      </div>
-      <div id="lookupResult" style="font-size:0.65rem;padding:8px;border-radius:var(--radius-sm);display:none;"></div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro · 输入 License Key</div>
       <div style="display:flex;gap:6px;">
         <input type="text" id="licenseInput" placeholder="粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
         <button type="button" id="btnActivateLicense" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
@@ -490,16 +485,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
     </div>
     <p class="note">
       1. 前往爱发电完成付款<br>
-      2. 记下订单号<br>
-      3. 登录后 → License Key 栏 → <strong>输入订单号查询</strong><br>
-      4. 系统自动返回你的专属 Key → 激活
+      2. 付款后自动回复中获取 License Key<br>
+      3. 在登录弹窗中粘贴 Key → 激活 Pro
     </p>
     <div style="margin-top:6px;">
       <button class="btn btn-primary" id="btnGoPay" style="width:100%;">前往爱发电付款 💰</button>
     </div>
     <p class="note" style="margin-top:8px;color:var(--accent2);">
-      🤖 全自动：付款后 5 分钟内 Key 自动生成<br>
-      在登录弹窗输入订单号即可领取
+      🔑 付款后 Key 在爱发电自动回复中<br>
     </p>
     <div class="license-input-row">
       <input type="text" id="licenseInputPay" placeholder="输入 License Key 激活 Pro">
@@ -929,15 +922,6 @@ function init(){
     if(!em||!pw){err("regError","need email+password");return;}
     if(pw.length<6){err("regError","password too short");return;}
     SS.register(em,pw,function(e,r){if(e){err("regError",e);return;}showAccountPanel();updateAccountUI();toast("registered! 3 credits");});
-  });
-
-  document.getElementById("btnLookupOrder").addEventListener("click",function(){
-    var oid=document.getElementById("orderLookup").value.trim();if(!oid){toast("enter order ID");return;}
-    var r=document.getElementById("lookupResult");r.style.display="block";r.style.background="var(--bg)";r.style.color="var(--muted)";r.textContent="...";
-    SS.lookupKey(oid,function(err,key){
-      if(err){r.style.background="rgba(255,107,107,0.1)";r.style.color="var(--accent)";r.textContent=err;}
-      else{r.style.background="rgba(78,205,196,0.1)";r.style.color="var(--accent2)";r.innerHTML="Key: <strong>"+key+"</strong>";document.getElementById("licenseInput").value=key;}
-    });
   });
 
   document.getElementById("btnActivateLicense").addEventListener("click",function(){
