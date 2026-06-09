@@ -437,22 +437,41 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <!-- ═══════ LOGIN MODAL ═══════ -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal login-modal">
-    <h3 style="margin-bottom:16px;font-size:0.95rem;">🔐 GitHub 登录</h3>
-    <p style="font-size:0.72rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-      🎁 首次登录自动注册 · 得 3 免费积分<br>
-      👥 邀请好友双方各 +2 积分<br>
-      🔒 数据存在你的 GitHub Gist，永不丢失<br>
-      🌐 无痕模式 · 多设备 · 换浏览器都能用
-    </p>
-    <button type="button" class="submit-btn" id="btnGitHubLogin" style="background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      使用 GitHub 登录
-    </button>
-    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
-      <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">💳 付款后输入 License Key 激活 Pro</div>
+    <div class="tab-row">
+      <button class="active" data-tab="login">🔐 登录</button>
+      <button data-tab="register">✨ 注册</button>
+    </div>
+    <div id="loginForm2">
+      <div class="field"><label>邮箱</label><input type="email" id="loginEmail2" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="loginPassword2" placeholder="••••••••"></div>
+      <div class="field" id="loginError2" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnLogin2">登录</button>
+    </div>
+    <div id="registerForm2" style="display:none;">
+      <div class="field"><label>邮箱</label><input type="email" id="regEmail2" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="regPassword2" placeholder="至少6位"></div>
+      <div class="field"><label>邀请码 <span style="color:var(--muted);">选填</span></label><input type="text" id="regInvite2" placeholder="好友邀请码"></div>
+      <div class="field"><div class="hint">🎁 注册即得 3 免费积分</div></div>
+      <div class="field" id="regError2" style="display:none"></div>
+      <button type="button" class="submit-btn" id="btnRegister2">注册</button>
+      <div id="backupBox" style="display:none;margin-top:12px;padding:12px;background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:var(--radius-sm);">
+        <div style="font-size:0.65rem;color:var(--accent2);margin-bottom:4px;">🔑 备份码 · 换设备恢复用</div>
+        <div id="backupCode" style="font-size:0.6rem;color:var(--text);word-break:break-all;font-family:monospace;margin-bottom:6px;"></div>
+        <button type="button" class="btn btn-outline" id="btnCopyBackup" style="font-size:0.6rem;padding:4px 10px;">📋 复制备份码</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">已有备份码？恢复账号</div>
       <div style="display:flex;gap:6px;">
-        <input type="text" id="licenseInput2" placeholder="License Key" style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.75rem;">
-        <button type="button" id="btnActivateLicense2" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.72rem;">激活</button>
+        <input type="text" id="restoreCode" placeholder="粘贴备份码" style="flex:1;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.65rem;">
+        <button type="button" id="btnRestoreAcc" style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;font-size:0.65rem;">恢复</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">💳 License Key 激活 Pro</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="licenseInput2" placeholder="粘贴 License Key" style="flex:1;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.65rem;">
+        <button type="button" id="btnActivateLicense2" style="padding:6px 10px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.65rem;">激活</button>
       </div>
     </div>
   </div>
@@ -493,8 +512,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 
 <!-- ═══════════════ p5.js ═══════════════ -->
 
-  <!-- GitHub OAuth Login (PKCE, no secret, works everywhere) -->
-  <script src="js/seedstudio-auth.js"></script>
+  <!-- Account system -->
+  <script src="js/seedstudio-account.js"></script>
 <script src="p5.min.js"
   onerror="this.onerror=null;this.src='https://unpkg.com/p5@1.9.4/lib/p5.min.js';">
 </script>
@@ -888,22 +907,74 @@ function init(){
     }
   }
 
-  // ═══ LOGIN MODAL (GitHub OAuth) ═══
+  // ═══ LOGIN MODAL ═══
   function showLoginModal(){document.getElementById('loginModal').classList.add('show');}
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
   document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
-  document.getElementById('btnGitHubLogin').addEventListener('click',function(){
-    var a=window.SeedStudioAccount;if(!a){toast('系统加载中');return;}
-    a.login();
+  // Tab switch
+  document.querySelectorAll('#loginModal .tab-row button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('#loginModal .tab-row button').forEach(function(b){b.classList.toggle('active',b===btn);});
+      document.getElementById('loginForm2').style.display=btn.dataset.tab==='login'?'block':'none';
+      document.getElementById('registerForm2').style.display=btn.dataset.tab==='register'?'block':'none';
+    });
   });
 
+  // Login
+  document.getElementById('btnLogin2').addEventListener('click',function(){
+    var e=document.getElementById('loginEmail2').value.trim();
+    var p=document.getElementById('loginPassword2').value;
+    if(!e||!p){document.getElementById('loginError2').textContent='请填写邮箱和密码';document.getElementById('loginError2').style.display='block';return;}
+    var a=window.SeedStudioAccount;if(!a){return;}
+    a.login(e,p,function(err,u){
+      if(err){document.getElementById('loginError2').textContent=err;document.getElementById('loginError2').style.display='block';return;}
+      hideLoginModal();updateAccountUI();toast('✅ 登录成功！积分: '+a.creditBalance);
+    });
+  });
+
+  // Register
+  document.getElementById('btnRegister2').addEventListener('click',function(){
+    var e=document.getElementById('regEmail2').value.trim();
+    var p=document.getElementById('regPassword2').value;
+    var inv=document.getElementById('regInvite2').value.trim();
+    if(!e||!p){document.getElementById('regError2').textContent='请填写邮箱和密码';document.getElementById('regError2').style.display='block';return;}
+    if(p.length<6){document.getElementById('regError2').textContent='密码至少6位';document.getElementById('regError2').style.display='block';return;}
+    var a=window.SeedStudioAccount;if(!a){return;}
+    a.register(e,p,inv,function(err,r){
+      if(err){document.getElementById('regError2').textContent=err;document.getElementById('regError2').style.display='block';return;}
+      // Show backup code
+      document.getElementById('backupCode').textContent=r.backupCode;
+      document.getElementById('backupBox').style.display='block';
+      hideLoginModal();updateAccountUI();
+      toast('🎉 注册成功！请复制备份码');
+    });
+  });
+
+  // Copy backup code
+  document.getElementById('btnCopyBackup').addEventListener('click',function(){
+    var c=document.getElementById('backupCode').textContent;
+    navigator.clipboard.writeText(c).then(function(){toast('📋 备份码已复制！请妥善保存');});
+  });
+
+  // Restore account
+  document.getElementById('btnRestoreAcc').addEventListener('click',function(){
+    var c=document.getElementById('restoreCode').value.trim();
+    if(!c){toast('请粘贴备份码');return;}
+    var a=window.SeedStudioAccount;
+    a.restoreAccount(c,function(err,u){
+      if(err){toast('❌ '+err);return;}
+      hideLoginModal();updateAccountUI();toast('✅ 账号已恢复！积分: '+a.creditBalance);
+    });
+  });
+
+  // License key
   document.getElementById('btnActivateLicense2').addEventListener('click',function(){
-    var key=document.getElementById('licenseInput2').value.trim();
-    if(!key){toast('请输入 License Key');return;}
+    var k=document.getElementById('licenseInput2').value.trim();
+    if(!k){toast('请输入 License Key');return;}
     var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先登录');return;}
-    if(key.length>=6){toast('🎉 Pro 已激活！');S.tier='pro';syncAll();draw();updateAccountUI();}
-    else{toast('❌ 无效的 License Key');}
+    if(k.length>=6){a.activatePro();S.tier='pro';syncAll();draw();updateAccountUI();toast('🎉 Pro 已激活！');}
+    else toast('❌ 无效');
   });
 
   document.getElementById('btnAccount').addEventListener('click',function(){
