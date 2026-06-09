@@ -7,6 +7,7 @@ exports.main = async function(e){
   var body=typeof e.body==='string'?JSON.parse(e.body):(e.body||e);
   var a=body.action||e.action, d=body.data||e.data||{};
   if(a==='ping') return {ok:1};
+  if(a==='debug') return {keys:Object.keys(e),httpMethod:e.httpMethod,path:e.path,body_type:typeof e.body,body_preview:JSON.stringify(e.body).substring(0,200)};
   if(a==='reg'){
     var ex=await db.collection('users').where({email:d.e}).count();
     if(ex.total) return {error:'exists'};
