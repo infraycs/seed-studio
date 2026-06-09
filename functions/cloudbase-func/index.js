@@ -4,6 +4,8 @@ const app = cloudbase.init({env: cloudbase.SYMBOL_CURRENT_ENV});
 const db = app.database();
 
 exports.main = async function(e){
+  // Handle OPTIONS (CORS preflight)
+  if(e.httpMethod==='OPTIONS') return {statusCode:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'}};
   var body=typeof e.body==='string'?JSON.parse(e.body):(e.body||e);
   var a=body.action||e.action, d=body.data||e.data||{};
   if(a==='ping') return {ok:1};
