@@ -463,12 +463,19 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       </div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
-      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro</div>
-      <p style="font-size:0.6rem;color:var(--muted);line-height:1.5;">
-        去爱发电付款 → 在备注里填写你的 <strong style="color:var(--accent2);" id="codeHint">8位账号码</strong> → 卖家验证后给你 License Key → 在下方激活
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:8px;">💳 升级 Pro</div>
+      <p style="font-size:0.6rem;color:var(--muted);line-height:1.5;margin-bottom:8px;">
+        1. 前往<a href="https://afdian.net/@Seed%20Studio" target="_blank" style="color:var(--accent2);">爱发电</a>付款<br>
+        2. 回到这里输入<span style="color:var(--accent2);">爱发电订单号</span>查询 Key<br>
+        3. 系统自动返回 License Key → 激活
       </p>
-      <div style="display:flex;gap:6px;margin-top:8px;">
-        <input type="text" id="licenseInput2" placeholder="粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input type="text" id="orderLookup" placeholder="爱发电订单号" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
+        <button type="button" id="btnLookupOrder" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">查询</button>
+      </div>
+      <div id="lookupResult" style="font-size:0.65rem;padding:8px;border-radius:var(--radius-sm);display:none;margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="licenseInput2" placeholder="或直接粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
         <button type="button" id="btnActivateLicense2" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
       </div>
     </div>
@@ -942,6 +949,24 @@ function init(){
       document.getElementById('codeHint').textContent=a.getAccountId();
       toast('✅ 登录成功！积分: '+a.creditBalance);
     });
+  });
+
+  // Order lookup → auto-get license key
+  document.getElementById('btnLookupOrder').addEventListener('click',function(){
+    var oid=document.getElementById('orderLookup').value.trim();
+    if(!oid){toast('请输入爱发电订单号');return;}
+    var res=document.getElementById('lookupResult');res.style.display='block';
+    res.style.background='var(--bg)';res.style.color='var(--muted)';res.textContent='查询中...';
+    fetch('js/valid-keys.json').then(function(r){return r.json();}).then(function(keys){
+      if(keys[oid]){
+        var k=keys[oid].key;res.style.background='rgba(78,205,196,0.1)';res.style.color='var(--accent2)';
+        res.innerHTML='🎉 Key: <strong>'+k+'</strong><br><small>已自动填入，点激活即可</small>';
+        document.getElementById('licenseInput2').value=k;
+      }else{
+        res.style.background='rgba(255,107,107,0.1)';res.style.color='var(--accent)';
+        res.textContent='未找到。请确认已付款并等待5分钟（系统自动处理）';
+      }
+    }).catch(function(){res.textContent='网络错误';});
   });
 
   // License activate

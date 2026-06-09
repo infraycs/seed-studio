@@ -1,0 +1,53 @@
+name: Auto-License
+on:
+  schedule: [{cron: '*/5 * * * *'}]
+  workflow_dispatch:
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    permissions: {contents: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - name: Check 爱发电 → generate keys
+        run: |
+          const crypto=require('crypto'),fs=require('fs');
+
+          const UID='5741d9da011b11efb33152540025c377';
+          const TOKEN='WJaK3djBgPCtX8xsYmVeG5kQAn7TDfMN';
+          const ts=Math.floor(Date.now()/1000);
+          const params=JSON.stringify({page:1,per_page:20});
+          const sign=crypto.createHash('md5').update(TOKEN+'params'+params+'ts'+ts+'user_id'+UID).digest('hex');
+
+          const resp=await fetch('https://afdian.net/api/open/query-order',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({user_id:UID,params,ts,sign})
+          });
+          const data=await resp.json();
+          if(data.ec!==200||!data.data||!data.data.list){console.log('API call ok, no orders');process.exit(0);}
+
+          const keysFile='js/valid-keys.json';
+          let keys={};
+          try{keys=JSON.parse(fs.readFileSync(keysFile,'utf8'));}catch(e){keys={};}
+
+          let changed=false;
+          data.data.list.forEach(o=>{
+            if(o.status===2&&!keys[o.out_trade_no]){
+              const key='PRO-'+crypto.randomBytes(4).toString('hex').toUpperCase();
+              keys[o.out_trade_no]={key,time:o.create_time,amount:o.total_amount};
+              console.log('NEW:',key,'for',o.out_trade_no,'¥'+o.total_amount);
+              changed=true;
+            }
+          });
+
+          if(changed){fs.writeFileSync(keysFile,JSON.stringify(keys,null,2));console.log('keys updated');}
+          else console.log('no new keys');
+        shell: node {0}
+      - name: Commit & push
+        run: |
+          git config user.name "SeedBot"
+          git config user.email "bot@seedstudio.top"
+          git add js/valid-keys.json
+          git diff --quiet --cached || (git commit -m "🔑 auto keys [skip ci]" && git push)
