@@ -30,21 +30,10 @@ function deduct(amt,cb){
   u.c-=(amt||1);save();cb(null,{rm:u.c});
 }
 
-var VALID_KEYS={};
-// Pre-generated keys (SHA-256 hashed). Seller sends raw key to user.
-// Format: PRO-XXXX-XXXX (12 chars)
-function h(s){for(var i=0,h=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return (h>>>0).toString(16);}
-function addKey(rawKey){VALID_KEYS[h(rawKey)]=rawKey;}
-// Add your keys here:
-addKey('PRO-A1B2-C3D4');
-addKey('PRO-E5F6-G7H8');
-addKey('PRO-I9J0-K1L2');
-addKey('PRO-M3N4-O5P6');
-addKey('PRO-Q7R8-S9T0');
+var MASTER_KEY='SEEDSTUDIO2024';
 
 function activateLicense(key,cb){
-  var hash=h(key.trim().toUpperCase());
-  if(VALID_KEYS[hash]){u.t='pro';u.c=999;save();cb(null,{ok:1,t:'pro'});}
+  if(key.trim().toUpperCase()===MASTER_KEY){u.t='pro';u.c=999;save();cb(null,{ok:1,t:'pro'});}
   else cb('invalid key',null);
 }
 
