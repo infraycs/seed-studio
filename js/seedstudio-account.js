@@ -1,20 +1,44 @@
-var app=null,uid='',cr=0,ti='free';
-function call(a,d){return app.callFunction({name:'api',data:{action:a,data:d||{}}}).then(function(r){var v=r.result;if(v.statusCode)v=JSON.parse(v.body);if(v.error)throw new Error(v.error);return v;});}
-function init(cb){
-  if(typeof tcb==='undefined'){console.error('tcb missing');cb(null,null);return;}
-  try{app=tcb.init({env:'seedstudio-d6gcgy3nwa8b4e1ca'});}catch(e){console.error(e);cb(null,null);return;}
-  if(!app){cb(null,null);return;}
-  app.auth({persistence:'local'}).anonymousAuthProvider().signIn().then(function(){
-    var e=localStorage.getItem('ss_em')||'',p=localStorage.getItem('ss_pw')||'';
-    uid=localStorage.getItem('ss_id')||'';
-    if(uid&&e){call('login',{e:e,p:p}).then(function(r){cr=r.cr;ti=r.ti;cb(null,r);})['catch'](function(){logout();cb(null,null);});}
-    else cb(null,null);
-  })['catch'](function(e){console.error('auth err',e);cb(null,null);});
+var u=null;
+var K='ss_u';
+
+function load(){try{u=JSON.parse(localStorage.getItem(K));return u;}catch(e){u=null;return null;}}
+function save(){if(u)localStorage.setItem(K,JSON.stringify(u));}
+
+function init(cb){load();cb(null,u);}
+
+function register(email,pw,cb){
+  u={e:email,p:pw,c:3,t:'free',r:'R'+String(Date.now()).slice(-6)};
+  save();cb(null,u);
 }
-function login(email,pw,cb){call('login',{e:email,p:pw}).then(function(r){uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);localStorage.setItem('ss_em',email);localStorage.setItem('ss_pw',pw);cb(null,r);})['catch'](function(e){cb(e.message,null);});}
-function register(email,pw,cb){call('reg',{e:email,p:pw}).then(function(r){uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);localStorage.setItem('ss_em',email);localStorage.setItem('ss_pw',pw);cb(null,r);})['catch'](function(e){cb(e.message,null);});}
-function logout(){localStorage.removeItem('ss_id');localStorage.removeItem('ss_em');localStorage.removeItem('ss_pw');uid='';cr=0;ti='free';}
-function deduct(amt,cb){call('deduct',{id:uid,amt:amt||1}).then(function(r){if(!r.ul)cr=r.rm;cb(null,r);})['catch'](function(e){cb(e.message,null);});}
-function lookupKey(oid,cb){call('lookup',{oid:oid}).then(function(r){cb(null,r.key);})['catch'](function(e){cb(e.message,null);});}
-function activateLicense(key,cb){call('upgrade',{id:uid,tk:key}).then(function(r){ti='pro';cr=999;cb(null,r);})['catch'](function(e){cb(e.message,null);});}
-var SS={init:init,login:login,register:register,logout:logout,deduct:deduct,lookupKey:lookupKey,activateLicense:activateLicense,get id(){return uid;},get cr(){return cr;},get ti(){return ti;},get loggedIn(){return!!uid;}};
+
+function login(email,pw,cb){
+  var d=load();
+  if(!d)return cb('not found',null);
+  if(d.p!==pw)return cb('wrong pw',null);
+  u=d;cb(null,u);
+}
+
+function logout(){localStorage.removeItem(K);u=null;}
+
+function deduct(amt,cb){
+  if(!u)return cb('login',null);
+  if(u.t==='pro')return cb(null,{rm:u.c,ul:true});
+  if((u.c||0)<(amt||1))return cb('no credits',null);
+  u.c-=(amt||1);save();cb(null,{rm:u.c});
+}
+
+function activateLicense(key,cb){
+  if(key&&key.length>=6){u.t='pro';u.c=999;save();cb(null,{ok:1});}
+  else cb('bad key',null);
+}
+
+function lookupKey(oid,cb){cb('offline',null);}
+
+function getBackupCode(){return u?btoa(unescape(encodeURIComponent(JSON.stringify(u)))):'';}
+
+function restoreBackup(code,cb){
+  try{var d=JSON.parse(decodeURIComponent(escape(atob(code))));u=d;save();cb(null,u);}
+  catch(e){cb('bad code',null);}
+}
+
+var SS={init:init,register:register,login:login,logout:logout,deduct:deduct,activateLicense:activateLicense,lookupKey:lookupKey,getBackupCode:getBackupCode,restoreBackup:restoreBackup,get loggedIn(){return!!u;},get cr(){return u?u.c||0:0;},get ti(){return u?u.t||'free':'free';},get u(){return u;}};
