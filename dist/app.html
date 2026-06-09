@@ -542,6 +542,10 @@ const PALETTES={
   retro:['#080604','#201408','#4a2008','#c86818','#f0b040','#ffe8c0'],
   arctic:['#040c14','#081c30','#103450','#1a6088','#48a8c8','#d8f0f8'],
   terracotta:['#080604','#1c1008','#3a1c10','#985830','#d89058','#f8e0c8'],
+  cream:['#faf8f4','#f0e8d8','#e8c8a0','#c87848','#a05028','#301008'],
+  paper:['#f8f8f6','#e8e8e0','#d0d0c0','#a0a090','#606058','#181810'],
+  sky:['#f4f8fc','#d8e8f8','#a0c8f0','#4888d0','#1850a0','#081030'],
+  blush:['#fcf6f8','#f8e0e8','#f0b8c8','#d85878','#a02048','#180810'],
 };
 const PAL_KEYS=Object.keys(PALETTES);
 
@@ -554,25 +558,24 @@ const S={
 function snap(){ return(({seed,layout,palette,shape,density,scale,rotation,noise,W,H})=>({seed,layout,palette,shape,density,scale,rotation,noise,W,H}))(S); }
 
 // ═══════════════ COLOR UTILS ═══════════════
-// Pick from palette with positional clumping — nearby positions get similar colors
 function pickColor(pal,t,seed){
   var i=Math.floor(((Math.sin(seed*12.9898+78.233)*43758.5453)%1)*3.5);
   i=Math.max(1,Math.min(pal.length-1,i+(t<0.5?0:2)));
   return pal[i];
 }
-// Get 2-3 dominant colors from palette
-function dominantColors(pal){
-  return [pal[2],pal[1],pal[3]];
-}
+function dominantColors(pal){return [pal[2],pal[1],pal[3]];}
+// Detect if palette is light-themed
+function isLight(pal){var h=parseInt(pal[0].slice(1,3),16);return h>0xa0;}
 
 // ═══════════════ DRAWING UTILS ═══════════════
 function drawBackground(p,pal){
-  var ctx=p.drawingContext;
+  var ctx=p.drawingContext,lt=isLight(pal);
+  var dc=lt?'#f8f8f8':'#020208',dd=lt?'#e8e8e8':'#000004';
   var grad=ctx.createRadialGradient(S.W*0.45,S.H*0.45,0,S.W*0.5,S.H*0.5,S.H*0.8);
-  grad.addColorStop(0,pal[1]);grad.addColorStop(0.35,pal[0]);grad.addColorStop(0.7,'#020208');grad.addColorStop(1,'#000004');
+  grad.addColorStop(0,lt?pal[1]:pal[1]);grad.addColorStop(0.35,pal[0]);grad.addColorStop(0.7,dc);grad.addColorStop(1,dd);
   ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
   var g2=ctx.createRadialGradient(S.W*0.75,S.H*0.2,0,S.W*0.65,S.H*0.35,S.H*0.65);
-  g2.addColorStop(0,pal[2]+'12');g2.addColorStop(1,'transparent');
+  g2.addColorStop(0,pal[2]+(lt?'20':'12'));g2.addColorStop(1,'transparent');
   ctx.fillStyle=g2;ctx.fillRect(0,0,S.W,S.H);
 }
 
@@ -588,19 +591,23 @@ function drawGrain(p,rng,amount){
   p.updatePixels();
 }
 
-function drawVignette(p){
-  var ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5;
+function drawVignette(p,pal){
+  var ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5,lt=isLight(pal);
   var grad=ctx.createRadialGradient(cx,cy,r*0.45,cx,cy,r*1.2);
-  grad.addColorStop(0,'transparent');grad.addColorStop(0.55,'transparent');grad.addColorStop(0.82,'rgba(0,0,0,0.22)');grad.addColorStop(1,'rgba(0,0,0,0.55)');
+  grad.addColorStop(0,'transparent');grad.addColorStop(0.55,'transparent');
+  grad.addColorStop(0.82,lt?'rgba(0,0,0,0.08)':'rgba(0,0,0,0.22)');
+  grad.addColorStop(1,lt?'rgba(0,0,0,0.18)':'rgba(0,0,0,0.55)');
   ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
 }
 
-function drawWatermark(p){
+function drawWatermark(p,pal){
   if(S.tier==='pro')return;
-  var ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
-  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.12)';ctx.textAlign='center';
+  var lt=isLight(pal),ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
+  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif';
+  ctx.fillStyle=lt?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.12)';ctx.textAlign='center';
   ctx.fillText('Seed Studio · 种子画室',S.W/2,S.H-fs*0.8);
-  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif';
+  ctx.fillStyle=lt?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.08)';
   ctx.fillText('seedstudio.top',S.W/2,S.H-fs*0.1);
 }
 
@@ -651,7 +658,7 @@ function drawVortex(p,rng,pal,shape,density,scale,rot,noiseAmt){
   var ctx=p.drawingContext,cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.18);
   cg.addColorStop(0,pal[4]+'25');cg.addColorStop(0.5,pal[2]+'08');cg.addColorStop(1,'transparent');
   ctx.fillStyle=cg;ctx.fillRect(0,0,S.W,S.H);
-  drawVignette(p);drawGrain(p,rng,0.018);
+  drawVignette(p,pal);drawGrain(p,rng,0.018);
 }
 
 // 2: GEOMETRIC — bold Swiss-design composition, 50% negative space
@@ -676,7 +683,7 @@ function drawGeometric(p,rng,pal,shape,density,scale,rot,noiseAmt){
     var ax=rng()*S.W*0.7+(side?S.W*0.3:0),ay=rng()*S.H*0.7;
     drawShapeGlow(p,ax,ay,rng()*5*scale+1.5,shape,rng,rot/360*(rng()-0.5),doms[Math.floor(rng()*doms.length)],rng()*0.4+0.2);
   }
-  drawVignette(p);drawGrain(p,rng,0.012);
+  drawVignette(p,pal);drawGrain(p,rng,0.012);
 }
 
 // 3: FLOWFIELD — particle flow accumulation (DesLauriers style)
@@ -697,7 +704,7 @@ function drawFlowfield(p,rng,pal,shape,density,scale,rot,noiseAmt){
       p.point(px,py);
     }
   }
-  drawVignette(p);drawGrain(p,rng,0.015);
+  drawVignette(p,pal);drawGrain(p,rng,0.015);
 }
 
 // 4: KALEIDOSCOPE — n-fold symmetry with organic variation
@@ -716,7 +723,7 @@ function drawKaleidoscope(p,rng,pal,shape,density,scale,rot,noiseAmt){
     }
   }
   p.fill(pal[4]);p.noStroke();p.circle(cx,cy,8*scale);
-  drawVignette(p);drawGrain(p,rng,0.018);
+  drawVignette(p,pal);drawGrain(p,rng,0.018);
 }
 
 // 5: CELLS — Voronoi biological cell structures
@@ -746,7 +753,7 @@ function drawCells(p,rng,pal,shape,density,scale,rot,noiseAmt){
     p.endShape(p.CLOSE);
     if(rng()>0.7)drawShapeGlow(p,si.x,si.y,cellR*0.25*scale,shape,rng,rot/360*(rng()-0.5),si.c,0.4);
   }
-  drawVignette(p);drawGrain(p,rng,0.016);
+  drawVignette(p,pal);drawGrain(p,rng,0.016);
 }
 
 // 6: LAYERS — overlapping transparent organic shapes (Hobbs watercolor-style)
@@ -772,7 +779,7 @@ function drawLayers(p,rng,pal,shape,density,scale,rot,noiseAmt){
     p.endShape(p.CLOSE);
     if(rng()>0.55)drawShapeGlow(p,ox+rng()*sz*0.5-sz*0.25,oy+rng()*sz*0.5-sz*0.25,sz*0.15*scale,shape,rng,rot/360*(rng()-0.5),doms[Math.min(l%doms.length+1,doms.length-1)],0.5);
   }
-  drawVignette(p);drawGrain(p,rng,0.015);
+  drawVignette(p,pal);drawGrain(p,rng,0.015);
 }
 
 // ═══════════════ MAIN DRAW ═══════════════
@@ -791,7 +798,7 @@ function draw(){
     case'layers':drawLayers(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
     default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
   }
-  drawWatermark(p);
+  drawWatermark(p,pal);
   p.fill(255,255,255,60);p.noStroke();p.textSize(11);p.textAlign(p.RIGHT,p.BOTTOM);
   p.text('🌱 seed:'+S.seed+' · '+S.layout+' · '+S.palette,S.W-16,S.H-12);
   updateUI();
