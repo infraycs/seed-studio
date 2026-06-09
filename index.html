@@ -407,7 +407,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 	        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:4px;">已有许可证？在此激活：</div>
 	        <div style="display:flex;gap:4px;">
 	          <input type="text" id="licenseKeyInput" placeholder="粘贴许可证密钥..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.65rem;font-family:var(--font-mono);">
-	          <button class="btn btn-accent" style="padding:6px 12px;font-size:0.65rem;flex:0 0 auto;" id="btnActivateLicense">激活</button>
+	          <button class="btn btn-accent" style="padding:6px 12px;font-size:0.65rem;flex:0 0 auto;" id="btnActivatePanel">激活</button>
 	        </div>
 	        <div id="licenseStatus" style="font-size:0.6rem;color:var(--muted);margin-top:4px;display:none;"></div>
 	      </div>
@@ -492,8 +492,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
       在登录弹窗输入订单号即可领取
     </p>
     <div class="license-input-row">
-      <input type="text" id="licenseInput" placeholder="输入 License Key 激活 Pro">
-      <button id="btnActivate">激活</button>
+      <input type="text" id="licenseInputPay" placeholder="输入 License Key 激活 Pro">
+      <button id="btnActivatePay">激活</button>
     </div>
     <button class="close-btn" id="btnCloseModal">关闭</button>
   </div>
@@ -912,6 +912,18 @@ function init(){
 
   document.getElementById("btnActivateLicense").addEventListener("click",function(){
     var k=document.getElementById("licenseInput").value.trim();if(!k){toast("enter key");return;}
+    if(!SS.loggedIn){toast("login first");return;}
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
+  });
+
+  document.getElementById("btnActivatePanel").addEventListener("click",function(){
+    var k=document.getElementById("licenseKeyInput").value.trim();if(!k){toast("enter key");return;}
+    if(!SS.loggedIn){toast("login first");return;}
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
+  });
+
+  document.getElementById("btnActivatePay").addEventListener("click",function(){
+    var k=document.getElementById("licenseInputPay").value.trim();if(!k){toast("enter key");return;}
     if(!SS.loggedIn){toast("login first");return;}
     SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
   });
