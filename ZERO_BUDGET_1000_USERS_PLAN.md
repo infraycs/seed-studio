@@ -1,6 +1,6 @@
 # 🌱 Seed Studio / 种子画室 — Zero-Budget Plan to First 1000 Users
 
-> URL: https://infraycs.github.io/seed-studio
+> URL: https://www.seedstudio.top
 > Pricing: Free (watermark + 1200px) / Pro ¥99 终身
 > Core loop: Create poster → Copy seed link → Share → Recipient opens → Recipient creates → Shares their link
 
@@ -10,7 +10,7 @@
 
 Before spending one minute on marketing, fix these product issues — every visitor you drive will bounce otherwise:
 
-1. **Fix the URL.** `infraycs.github.io/seed-studio` is a hard sell. Buy a domain: `seed.studio` (available via Porkbun, ~$12/year — the one exception to "$0 budget"). If truly zero budget, at minimum set up a custom subdomain via Cloudflare that looks clean. A GitHub Pages URL signals "side project," not "SaaS worth ¥99."
+1. **Fix the URL.** `www.seedstudio.top` is a hard sell. Buy a domain: `seed.studio` (available via Porkbun, ~$12/year — the one exception to "$0 budget"). If truly zero budget, at minimum set up a custom subdomain via Cloudflare that looks clean. A GitHub Pages URL signals "side project," not "SaaS worth ¥99."
 
 2. **OG image.** The landing page needs `og:image` so when someone shares a seed link on WeChat/Twitter/Discord, a beautiful poster preview appears — not a blank card. Generate your best poster, save it as 1200x630, add `<meta property="og:image" content="...">`.
 
@@ -33,7 +33,7 @@ Xiaohongshu is a visual discovery platform. Algorithmic posters are inherently v
 **Account setup:**
 - Name: 种子画室SeedStudio (or 种子画室)
 - Bio: 🌱 一键生成独一无二的算法海报｜5种生成式版式｜8套精选配色｜输入种子数字，生成无限可能｜免费使用👇
-- Link in bio: infraycs.github.io/seed-studio (or your custom domain)
+- Link in bio: www.seedstudio.top (or your custom domain)
 - Category: 艺术/设计
 
 **Post Template 1 — The Hook (首发帖)**
@@ -69,7 +69,7 @@ Xiaohongshu is a visual discovery platform. Algorithmic posters are inherently v
 正文:
 手把手教你用种子画室生成海报，不用会设计，不用会代码👇
 
-Step 1: 打开网站 infraycs.github.io/seed-studio
+Step 1: 打开网站 www.seedstudio.top
 Step 2: 点「随机生成」按钮
 Step 3: 不满意就继续点，满意了就点「导出PNG」
 Step 4: 复制链接发给朋友，他们能看到你生成的同一张海报✨
@@ -184,7 +184,7 @@ Zhihu is for authority-building and long-tail SEO. Your content here gets indexe
 免费的，用着玩的。做壁纸、做海报都行。
 Pro版¥99终身，解锁4K无水印导出+商用授权。
 
-地址：infraycs.github.io/seed-studio
+地址：www.seedstudio.top
 
 [插入3-4张示例海报截图]
 
@@ -334,7 +334,7 @@ Day 5 朋友圈:
 - 设计/插画/手账群：分享海报截图 + "用这个工具生成的，免费的，链接发下面👇"
 - 独立开发者/程序员群：分享技术实现 + "纯前端，p5.js，单HTML文件，开源"
 - 壁纸/头像分享群：生成一批精美壁纸直接发群里，有人问就说工具名
-- **关键动作**: 在每个群里，确保发的是你的 seed link（例如 `infraycs.github.io/seed-studio/?s=888888888&l=vortex&c=neon`），而不是首页链接。这样收到的人打开看到的是你生成的那张海报，好奇心会驱使Ta点「随机生成」。
+- **关键动作**: 在每个群里，确保发的是你的 seed link（例如 `www.seedstudio.top/?s=888888888&l=vortex&c=neon`），而不是首页链接。这样收到的人打开看到的是你生成的那张海报，好奇心会驱使Ta点「随机生成」。
 
 ---
 
@@ -438,7 +438,7 @@ Would love this community's feedback:
 2. What generative techniques should I add next? (L-systems? Reaction-diffusion? Strange attractors?)
 3. Are the parameter ranges providing enough control?
 
-Link: https://infraycs.github.io/seed-studio
+Link: https://www.seedstudio.top
 ```
 
 **r/webdev (2.3M members)**
@@ -462,7 +462,7 @@ Deployed on GitHub Pages. Free. Pro ¥99 lifetime.
 
 View source (it's one file). Happy to answer technical questions.
 
-Link: https://infraycs.github.io/seed-studio
+Link: https://www.seedstudio.top
 GitHub: [your GitHub link]
 ```
 
@@ -478,7 +478,7 @@ Title: This website generates a unique, beautiful poster from a single number. E
 
 Body:
 ```
-https://infraycs.github.io/seed-studio
+https://www.seedstudio.top
 
 Change the seed number → completely different poster. Same seed = same poster, on any computer, forever. Share a link, the recipient sees exactly what you created.
 
@@ -511,7 +511,7 @@ One number → one unique poster. Change the number → infinite variations.
 No signup. No install. Just open and create.
 
 It's called Seed Studio.
-https://infraycs.github.io/seed-studio
+https://www.seedstudio.top
 ```
 [attach 4-poster collage image]
 
@@ -525,7 +525,7 @@ https://infraycs.github.io/seed-studio
 💠 Kaleidoscope — N-fold symmetry
 
 The ONLY difference is the algorithm.
-https://infraycs.github.io/seed-studio
+https://www.seedstudio.top
 ```
 [attach comparison image]
 
@@ -679,7 +679,7 @@ It's free to use. Pro tier (¥99 lifetime) unlocks 4K export and removes the wat
 
 Code is view-source. Happy to answer questions about the implementation — especially the PRNG, the flow field, or the URL-state architecture.
 
-Link: https://infraycs.github.io/seed-studio
+Link: https://www.seedstudio.top
 ```
 
 **HN posting tips:**
@@ -723,7 +723,7 @@ Link: https://infraycs.github.io/seed-studio
 
 4. **Add "Live Demo" button at the very top:**
 ```
-### 🚀 [Try it live →](https://infraycs.github.io/seed-studio)
+### 🚀 [Try it live →](https://www.seedstudio.top)
 ```
 
 5. **Pin the repo** to your GitHub profile.
@@ -1099,7 +1099,7 @@ Given zero budget and one person executing:
 ## 9. Quick-Reference: URLs to Copy-Paste
 
 ```
-Product:   https://infraycs.github.io/seed-studio
+Product:   https://www.seedstudio.top
 GitHub:    [your GitHub repo URL]
 Xiaohongshu: [your RED profile URL after creating]
 Douyin:    [your Douyin profile after creating]

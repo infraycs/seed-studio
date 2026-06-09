@@ -112,7 +112,7 @@ Go to `https://www.west.cn/active/ymh/`, register, start real-name verification.
 
 #### Block 2: Generate content assets (1 hour)
 
-Open `https://infraycs.github.io/seed-studio`. Do this:
+Open `https://www.seedstudio.top`. Do this:
 
 1. Generate and save **20 beautiful posters**. Vary layouts (use all 5: Vortex, Mondrian, Galaxy, Kaleidoscope, Fluid) and palettes. Hit Randomize until you get a stunning one, then export. Name files by seed number (e.g., `seed-888888888.png`) so you can regenerate if needed.
 
@@ -231,7 +231,7 @@ Tech: p5.js, vanilla JS, one HTML file. Free to use (watermarked export). Pro is
 
 Would love this community's feedback on which layout produces the best compositions and what generative techniques I should add next.
 
-Link: https://infraycs.github.io/seed-studio
+Link: https://www.seedstudio.top
 ```
 
 **Twitter/X tweet 1 (copy-paste):**
@@ -243,7 +243,7 @@ One number → one unique poster. Change the number → infinite variations.
 No signup. No install. Just open and create.
 
 It's called Seed Studio.
-https://infraycs.github.io/seed-studio
+https://www.seedstudio.top
 
 [attach 4-poster collage image]
 
@@ -366,7 +366,7 @@ https://infraycs.github.io/seed-studio
 
 | What | URL |
 |------|-----|
-| **Your product** | `https://infraycs.github.io/seed-studio` |
+| **Your product** | `https://www.seedstudio.top` |
 | **Domain purchase (west.cn)** | `https://www.west.cn/active/ymh/` |
 | **Domain fallback (AliCloud)** | `https://wanwang.aliyun.com/` |
 | **Domain fallback 2 (Tencent)** | `https://cloud.tencent.com/act/pro/domain` |
