@@ -35,23 +35,22 @@ async function sha256(plain){
 async function login(){
   var verifier=randStr(64);
   sessionStorage.setItem('ss_verifier',verifier);
+  var state=randStr(16);
   var challenge=b64url(await sha256(verifier));
   var url='https://github.com/login/oauth/authorize'+
     '?client_id='+CLIENT_ID+
     '&redirect_uri='+encodeURIComponent(REDIRECT)+
     '&scope=gist'+
-    '&state='+randStr(16);
-  // Store state to verify callback
-  var state=url.match(/state=([^&]+)/)[1];
-  sessionStorage.setItem('ss_state',state);
+    '&state='+state;
+  localStorage.setItem('ss_state',state);
   window.location.href=url;
 }
 
 // ═══════════════ CALLBACK (called from callback.html) ═══════════════
 async function handleCallback(code,state){
-  var savedState=sessionStorage.getItem('ss_state');
+  var savedState=localStorage.getItem('ss_state');
   if(state!==savedState){return{error:'State mismatch'};}
-  sessionStorage.removeItem('ss_state');
+  localStorage.removeItem('ss_state');
 
   var verifier=sessionStorage.getItem('ss_verifier');
   sessionStorage.removeItem('ss_verifier');
