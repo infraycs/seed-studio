@@ -28,7 +28,7 @@ function login(email,password,cb){
   currentUser=u;creditBalance=u.cr||0;membershipTier=u.ti||'free';referralCode=u.rc||'';cb(null,u);
 }
 
-function logout(cb){currentUser=null;creditBalance=0;membershipTier='free';referralCode='';cb(null);}
+function logout(cb){localStorage.removeItem('ss_u');currentUser=null;creditBalance=0;membershipTier='free';referralCode='';cb(null);}
 
 function deductCredit(amount,reason,cb){
   if(!currentUser){cb('请先登录',null);return;}
