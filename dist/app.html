@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seed Studio · 种子画室 — Generative Poster Art</title>
+<style>
+/* ═══════════════ THEME ═══════════════ */
+:root {
+  --bg: #08080c;
+  --surface: #111118;
+  --surface2: #1a1a24;
+  --border: #252530;
+  --border-active: #3d3d50;
+  --text: #e8e8ed;
+  --text2: #a0a0b0;
+  --muted: #646478;
+  --accent: #ff6b6b;
+  --accent-glow: rgba(255,107,107,0.25);
+  --accent2: #4ecdc4;
+  --accent2-glow: rgba(78,205,196,0.2);
+  --accent3: #ffe66d;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'SF Mono', 'Consolas', 'Monaco', monospace;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════ LEFT PANEL ═══════════════ */
+#panel {
+  width: 360px; min-width: 360px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 10;
+  position: relative;
+}
+#panel::after {
+  content: ''; position: absolute; top: 0; right: -1px;
+  width: 1px; height: 100%;
+  background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent 60%);
+  opacity: 0.4;
+}
+
+#panel-header {
+  padding: 24px 24px 0;
+  display: flex; align-items: center; gap: 12px;
+}
+#panel-header .logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; box-shadow: 0 4px 16px var(--accent-glow);
+}
+#panel-header h1 {
+  font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text), var(--text2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* ═══════════════ TABS ═══════════════ */
+#tabs { display: flex; padding: 20px 24px 0; gap: 4px; }
+#tabs button {
+  flex: 1; padding: 9px 0; border: none; background: transparent;
+  color: var(--muted); font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; border-radius: 8px 8px 0 0; transition: var(--transition);
+  font-family: var(--font); letter-spacing: 0.02em;
+  position: relative;
+}
+#tabs button:hover { color: var(--text2); }
+#tabs button.active {
+  color: var(--text);
+  background: var(--surface2);
+}
+#tabs button.active::after {
+  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px;
+  background: var(--accent); border-radius: 1px;
+}
+
+/* ═══════════════ TAB CONTENT ═══════════════ */
+.tab-content { display: none; flex-direction: column; gap: 16px; padding: 20px 24px; overflow-y: auto; flex: 1; }
+.tab-content.active { display: flex; }
+
+/* ═══════════════ SECTIONS ═══════════════ */
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section-label {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--muted); font-weight: 600;
+}
+
+/* ═══════════════ COLOR SWATCHES ═══════════════ */
+.swatch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.swatch-grid button {
+  aspect-ratio: 1.6; border-radius: var(--radius-sm); border: 2px solid transparent;
+  cursor: pointer; transition: var(--transition); position: relative;
+}
+.swatch-grid button:hover { transform: scale(1.05); z-index: 2; }
+.swatch-grid button.active { border-color: #fff; box-shadow: 0 0 16px rgba(255,255,255,0.15); }
+.swatch-grid button.active::after {
+  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+
+/* ═══════════════ PILL SELECTOR ═══════════════ */
+.pill-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.pill-row button {
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--text2); font-size: 0.76rem; cursor: pointer;
+  transition: var(--transition); font-family: var(--font); font-weight: 500;
+  white-space: nowrap;
+}
+.pill-row button:hover { border-color: var(--border-active); color: var(--text); }
+.pill-row button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* ═══════════════ SLIDERS ═══════════════ */
+.param-row { display: flex; flex-direction: column; gap: 5px; }
+.param-row label { font-size: 0.72rem; color: var(--text2); display: flex; justify-content: space-between; font-weight: 500; }
+.param-row label .val { color: var(--accent2); font-weight: 700; font-family: var(--font-mono); font-size: 0.7rem; }
+
+input[type="range"] {
+  -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px;
+  background: var(--border); outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; cursor: pointer; border: 2px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: var(--transition);
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+/* ═══════════════ BUTTONS ═══════════════ */
+.btn-row { display: flex; gap: 8px; }
+.btn {
+  flex: 1; padding: 10px 16px; border-radius: var(--radius-sm);
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+  font-family: var(--font); text-align: center; letter-spacing: 0.02em;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--border-active); color: var(--text); background: var(--surface2); }
+.btn-primary { background: var(--accent); border: 1px solid var(--accent); color: #fff; }
+.btn-primary:hover { box-shadow: 0 4px 20px var(--accent-glow); transform: translateY(-1px); }
+.btn-accent { background: transparent; border: 1px solid var(--accent2); color: var(--accent2); }
+.btn-accent:hover { background: var(--accent2-glow); }
+
+/* ═══════════════ SEED ═══════════════ */
+.seed-display {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text2);
+  background: var(--bg); padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.seed-display strong { color: var(--accent3); font-weight: 500; }
+.seed-display .icon-btn { cursor: pointer; color: var(--muted); border: none; background: none; padding: 4px 6px; font-size: 0.85rem; transition: var(--transition); }
+.seed-display .icon-btn:hover { color: var(--text); }
+
+/* ═══════════════ HISTORY ═══════════════ */
+.history-list { display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; }
+.history-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px; border-radius: var(--radius-sm); background: var(--bg);
+  font-size: 0.72rem; cursor: pointer; border: 1px solid transparent; transition: var(--transition);
+  font-family: var(--font-mono);
+}
+.history-item:hover { border-color: var(--border); background: var(--surface2); }
+.history-item .seed-num { color: var(--accent2); }
+
+/* ═══════════════ CANVAS AREA ═══════════════ */
+#canvas-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(255,107,107,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(78,205,196,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(120,120,200,0.03) 0%, transparent 80%);
+  position: relative; overflow: auto; padding: 32px;
+}
+#canvas-wrap canvas {
+  border-radius: 6px;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  transition: box-shadow 0.4s;
+}
+#canvas-wrap canvas:hover {
+  box-shadow: 0 16px 72px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+}
+
+/* ═══════════════ LOGIN MODAL ═══════════════ */
+.login-modal{max-width:360px;width:90%;}
+.login-modal .tab-row{display:flex;gap:0;margin-bottom:16px;}
+.login-modal .tab-row button{flex:1;padding:8px;border:none;background:transparent;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font);transition:var(--transition);}
+.login-modal .tab-row button.active{color:var(--text);border-bottom-color:var(--accent2);}
+.login-modal .field{margin-bottom:12px;}
+.login-modal .field label{display:block;font-size:0.68rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
+.login-modal .field input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.85rem;font-family:var(--font);outline:none;transition:border-color 0.2s;}
+.login-modal .field input:focus{border-color:var(--accent2);}
+.login-modal .field input[type=password]{letter-spacing:0.2em;font-family:var(--font-mono);font-size:1rem;}
+.login-modal .field input[type=password]::placeholder{letter-spacing:normal;font-size:0.8rem;font-family:var(--font);}
+.login-modal .field .hint{font-size:0.62rem;color:var(--accent2);margin-top:3px;}
+.login-modal .field .error{font-size:0.62rem;color:var(--accent);margin-top:3px;}
+.login-modal .submit-btn{width:100%;padding:12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:var(--font);margin-top:4px;}
+.login-modal .submit-btn:hover{opacity:0.9;}
+.login-modal .switch-text{text-align:center;font-size:0.7rem;color:var(--muted);margin-top:12px;cursor:pointer;}
+.login-modal .switch-text:hover{color:var(--accent2);}
+
+/* ═══════════════ PAYMENT MODAL ═══════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; max-width: 380px; width: 90%;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.modal h3 { font-size: 1.1rem; margin-bottom: 6px; }
+.modal .price { font-size: 2rem; font-weight: 800; color: var(--accent2); margin: 12px 0; }
+.modal .qr-placeholder {
+  width: 200px; height: 200px; margin: 16px auto; background: #fff;
+  border-radius: var(--radius-sm); display: flex; align-items: center;
+  justify-content: center; color: #333; font-size: 0.8rem;
+  flex-direction: column; gap: 6px;
+}
+.modal .note { font-size: 0.7rem; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+.modal .close-btn {
+  margin-top: 16px; padding: 8px 24px; border: 1px solid var(--border);
+  border-radius: 20px; background: transparent; color: var(--text2);
+  cursor: pointer; font-family: var(--font); font-size: 0.8rem;
+}
+.modal .close-btn:hover { border-color: var(--text); }
+
+.license-input-row {
+  display: flex; gap: 6px; margin-top: 8px;
+}
+.license-input-row input {
+  flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono);
+  font-size: 0.75rem; outline: none;
+}
+.license-input-row input:focus { border-color: var(--accent2); }
+.license-input-row button {
+  padding: 8px 16px; background: var(--accent2); border: none; border-radius: var(--radius-sm);
+  color: #000; font-weight: 700; cursor: pointer; font-family: var(--font); font-size: 0.75rem;
+}
+
+/* ═══════════════ TOAST ═══════════════ */
+#toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: var(--surface2); color: #fff; padding: 12px 28px; border-radius: 28px;
+  font-size: 0.82rem; font-weight: 500; opacity: 0; pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.6); border: 1px solid var(--border);
+  font-family: var(--font);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+  #panel { width: 100%; min-width: 100%; max-height: 44vh; }
+  .tab-content { max-height: calc(44vh - 140px); }
+  #canvas-wrap { padding: 12px; min-height: 50vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ PANEL ═══════════════ -->
+<div id="panel">
+  <div id="panel-header">
+    <div class="logo">🌱</div>
+    <h1>Seed Studio <span style="font-weight:400;font-size:0.75rem;color:var(--muted);">种子画室</span></h1>
+	    <div id="proBadge" style="display:none;align-items:center;gap:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:0.62rem;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;white-space:nowrap;">💎 PRO · <span id="proPlan"></span></div>
+  </div>
+
+  <div id="tabs">
+    <button class="active" data-tab="generate">🌱 创作</button>
+    <button data-tab="export">📤 导出</button>
+  </div>
+
+  <!-- ═══════ TAB: GENERATE ═══════ -->
+  <div class="tab-content active" id="tab-generate">
+
+    <div class="section">
+      <div class="section-label">版式 Styles</div>
+      <div class="pill-row" id="layoutPills">
+        <button value="vortex" class="active">🌀 漩涡</button>
+        <button value="geometric">◼ 几何</button>
+        <button value="flowfield">🌊 流场</button>
+        <button value="kaleidoscope">💠 万花筒</button>
+        <button value="cells">🔬 细胞</button>
+        <button value="layers">🫧 叠层</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">调色板 Palette</div>
+      <div class="swatch-grid" id="swatches"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">形状 Shape</div>
+      <div class="pill-row" id="shapePills">
+        <button value="circles" class="active">● 圆形</button>
+        <button value="lines">╱ 线条</button>
+        <button value="rects">■ 方块</button>
+        <button value="triangles">▲ 三角</button>
+        <button value="hexagons">⬡ 六边</button>
+        <button value="stars">★ 星形</button>
+        <button value="dots">· 细点</button>
+        <button value="mixed">✧ 混合</button>
+      </div>
+    </div>
+
+    <div class="param-row">
+      <label>密度 Density <span class="val" id="vDensity">40</span></label>
+      <input type="range" id="density" min="5" max="100" value="40" step="1">
+    </div>
+    <div class="param-row">
+      <label>缩放 Scale <span class="val" id="vScale">1.00</span></label>
+      <input type="range" id="scale" min="0.2" max="3" value="1" step="0.05">
+    </div>
+    <div class="param-row">
+      <label>旋转 Rotation <span class="val" id="vRot">0°</span></label>
+      <input type="range" id="rotation" min="0" max="360" value="0" step="1">
+    </div>
+    <div class="param-row">
+      <label>噪声 Noise <span class="val" id="vNoise">0.30</span></label>
+      <input type="range" id="noise" min="0" max="1" value="0.3" step="0.01">
+    </div>
+
+    <div class="section">
+      <div class="section-label">种子 Seed</div>
+      <div class="seed-display">
+        <span id="seedVal">---</span>
+        <button class="icon-btn" id="btnCopySeed" title="复制种子链接">📋</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-accent" id="btnRandom">🎲 随机生成</button>
+      <button class="btn btn-outline" id="btnUndo">↩ 撤销</button>
+    </div>
+
+    <div class="section">
+      <div class="section-label">最近种子</div>
+      <div class="history-list" id="historyList">
+        <div style="color:var(--muted);font-size:0.72rem;padding:6px;">随机生成后出现在这里</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ TAB: EXPORT ═══════ -->
+  <div class="tab-content" id="tab-export">
+    <div class="section">
+      <div class="section-label">画布尺寸</div>
+      <div class="pill-row" id="resPills">
+        <button data-w="1080" data-h="1080">1:1</button>
+        <button data-w="1080" data-h="1350">4:5</button>
+        <button data-w="1920" data-h="1080">16:9</button>
+        <button data-w="3840" data-h="2160">4K</button>
+        <button data-w="2480" data-h="3508">A4</button>
+        <button data-w="960" data-h="540" class="active">预览</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnExport">📥 导出 PNG (2x)</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="btnCopyImg">📋 复制到剪贴板</button>
+    </div>
+
+    <div class="section" style="margin-top:8px;">
+      <div class="section-label">设置</div>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="btnSave">💾 保存设置</button>
+        <button class="btn btn-outline" id="btnLoad">📂 加载设置</button>
+        <input type="file" id="fileInput" style="display:none" accept=".json">
+      </div>
+    </div>
+
+    <!-- Upgrade to Pro -->
+    <div class="section" style="margin-top:8px;background:linear-gradient(135deg,rgba(255,107,107,0.08),rgba(78,205,196,0.08));border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;" id="upgradeBox">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.2rem;">🚀</span>
+        <div>
+          <div style="font-weight:700;font-size:0.82rem;">Seed Studio Pro</div>
+          <div style="font-size:0.68rem;color:var(--muted);">无水印 · 4K导出 · 商用授权</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px;">
+        <button class="btn btn-primary" style="flex:1;font-size:0.72rem;" id="btnUpgrade">💎 ¥6/月</button>
+        <button class="btn btn-outline" style="flex:1;font-size:0.68rem;" id="btnLifetime">🔑 ¥39/年</button>
+      </div>
+      <div style="font-size:0.6rem;color:var(--muted);margin-top:6px;text-align:center;">扫码支付 · 获取 License Key 激活</div>
+    </div>
+	      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+	        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:4px;">已有许可证？在此激活：</div>
+	        <div style="display:flex;gap:4px;">
+	          <input type="text" id="licenseKeyInput" placeholder="粘贴许可证密钥..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.65rem;font-family:var(--font-mono);">
+	          <button class="btn btn-accent" style="padding:6px 12px;font-size:0.65rem;flex:0 0 auto;" id="btnActivatePanel">激活</button>
+	        </div>
+	        <div id="licenseStatus" style="font-size:0.6rem;color:var(--muted);margin-top:4px;display:none;"></div>
+	      </div>
+
+    <div class="section" style="margin-top:4px;">
+      <div class="section-label">快捷键</div>
+      <div style="font-size:0.7rem;color:var(--muted);line-height:2;">
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">R</kbd> 随机 &nbsp;
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">E</kbd> 导出 &nbsp;
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Ctrl+Z</kbd> 撤销<br>
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">1-6</kbd> 6种版式 &nbsp;
+        <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">Space</kbd> 全屏
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CANVAS ═══════════════ -->
+<div id="canvas-wrap">
+<!-- Account bar -->
+<div id="account-bar" style="position:fixed;top:12px;right:16px;z-index:100;display:flex;align-items:center;gap:10px;font-size:0.75rem;font-family:var(--font);">
+  <a href="index.html" style="color:var(--muted);text-decoration:none;font-size:0.7rem;margin-right:6px;">← 首页</a>
+  <span id="creditDisplay" style="color:var(--accent2);font-weight:700;"></span>
+  <button id="btnAccount" class="btn btn-outline" style="padding:5px 12px;font-size:0.7rem;flex:0 0 auto;">🔐 登录</button>
+</div>
+</div>
+
+<!-- ═══════ LOGIN MODAL ═══════ -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal login-modal">
+    <div class="tab-row">
+      <button class="active" id="tabLoginBtn">🔐 登录</button>
+      <button id="tabRegisterBtn">✨ 注册</button>
+    </div>
+    <div id="loginPanel2">
+      <div class="field" style="margin-top:12px;"><label>邮箱</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <div class="field" id="loginError" style="display:none;font-size:0.65rem;color:var(--accent);"></div>
+      <button type="button" class="submit-btn" id="btnLogin">登录</button>
+    </div>
+    <div id="registerPanel2" style="display:none;">
+      <div class="field" style="margin-top:12px;"><label>邮箱</label><input type="email" id="regEmail" placeholder="your@email.com"></div>
+      <div class="field"><label>密码</label><input type="password" id="regPassword" placeholder="至少6位"></div>
+      <div class="field"><div class="hint">🎁 注册即得 3 免费积分</div></div>
+      <div class="field" id="regError" style="display:none;font-size:0.65rem;color:var(--accent);"></div>
+      <button type="button" class="submit-btn" id="btnRegister">注册</button>
+    </div>
+    <div id="accountPanel2" style="display:none;">
+      <div style="text-align:center;padding:8px 0;">
+        <div id="accountEmail" style="font-weight:700;font-size:0.85rem;"></div>
+        <div id="accountCredits" style="font-size:0.75rem;color:var(--accent2);margin-top:4px;"></div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <button type="button" id="btnAccountLogout" style="padding:6px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;font-size:0.7rem;">退出登录</button>
+        <button type="button" id="btnAccountClose" style="padding:6px 16px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">关闭</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:6px;">💳 升级 Pro · 输入 License Key</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="licenseInput" placeholder="粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
+        <button type="button" id="btnActivateLicense" style="padding:8px 12px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ═══════ PAYMENT MODAL ═══════ -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <h3>🚀 升级到 Seed Studio Pro</h3>
+    <div class="price" id="payPrice">¥6/月 · ¥39/年</div>
+    <div class="qr-placeholder" id="qrBox" style="background:#111;flex-direction:column;gap:10px;padding:20px;">
+      <span style="font-size:1.5rem;">💳</span>
+      <span style="font-weight:700;font-size:0.9rem;">爱发电付款</span>
+      <span style="font-size:0.7rem;color:#888;">支付宝 / 微信支付</span>
+    </div>
+    <p class="note">
+      1. 前往爱发电完成付款<br>
+      2. 付款后自动回复中获取 License Key<br>
+      3. 在登录弹窗中粘贴 Key → 激活 Pro
+    </p>
+    <div style="margin-top:6px;">
+      <button class="btn btn-primary" id="btnGoPay" style="width:100%;">前往爱发电付款 💰</button>
+    </div>
+    <p class="note" style="margin-top:8px;color:var(--accent2);">
+      🔑 付款后 Key 在爱发电自动回复中<br>
+    </p>
+    <div class="license-input-row">
+      <input type="text" id="licenseInputPay" placeholder="输入 License Key 激活 Pro">
+      <button id="btnActivatePay">激活</button>
+    </div>
+    <button class="close-btn" id="btnCloseModal">关闭</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════ p5.js ═══════════════ -->
+
+  <!-- Account system -->
+  <script src="js/seedstudio-account.js"></script>
+<script src="p5.min.js"></script>
+
+	<!-- ═══════════════ License: built into inline JS below ═══════════════ -->
+
+
+<script>
+window.onerror=function(m,s,l,c,e){var d=document.getElementById('errLog');if(d)d.innerHTML+='<br>'+m;return false;};
+(function(){try{var d=document.createElement("div");d.id='errLog';d.style="position:fixed;top:4px;right:8px;z-index:9999;font-size:9px;color:#4ecdc4;font-family:monospace;max-width:300px;text-align:right;";d.textContent="JS ✓";document.body.appendChild(d);setTimeout(function(){if(!document.querySelector('canvas'))d.textContent='JS ✓ | Canvas ✗';},2000);}catch(e){}})();
+// ═══════════════ PRNG ═══════════════
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// ═══════════════ PALETTES ═══════════════
+const PALETTES={
+  midnight:['#060b18','#0d1d4a','#1a3f8f','#2979d4','#5ca8f0','#d0e8ff'],
+  aurora:['#060818','#1a1050','#3a2090','#1a8088','#30d8c8','#b8fff8'],
+  ember:['#0c0604','#2a1208','#7a2808','#d84818','#ff8c48','#ffe0c8'],
+  forest:['#060c04','#142a0a','#1a5212','#3a8a28','#78c058','#d8f8c8'],
+  sakura:['#0c0610','#2a1030','#6a2058','#c84888','#f890b8','#ffe8f0'],
+  ocean:['#040c18','#082048','#0c3c70','#1a68b8','#48a8e0','#c8e8f8'],
+  neon:['#040010','#180040','#5000b0','#d000f0','#00e8ff','#88ff20'],
+  mono:['#060606','#181818','#383838','#707070','#b8b8b8','#f0f0f0'],
+  coral:['#060a0c','#142830','#2a4858','#d06060','#f89078','#ffe0d8'],
+  sunset:['#080410','#200c30','#501858','#d04060','#ffa060','#ffe8c0'],
+  matcha:['#060c06','#0e200c','#1a3a14','#4a8028','#88c058','#e0f8d0'],
+  ink:['#040408','#10101a','#282838','#606070','#b0b0b8','#f0f0f0'],
+  candy:['#060818','#200840','#6018a0','#e040c0','#ff80e8','#ffe0f8'],
+  retro:['#080604','#201408','#4a2008','#c86818','#f0b040','#ffe8c0'],
+  arctic:['#040c14','#081c30','#103450','#1a6088','#48a8c8','#d8f0f8'],
+  terracotta:['#080604','#1c1008','#3a1c10','#985830','#d89058','#f8e0c8'],
+};
+const PAL_KEYS=Object.keys(PALETTES);
+
+// ═══════════════ STATE ═══════════════
+const S={
+  seed:Math.floor(Math.random()*1e9), layout:'vortex', palette:'neon', shape:'circles',
+  density:40, scale:1.0, rotation:0, noise:0.3, W:960, H:540,
+  tier:'free', history:[],
+};
+function snap(){ return(({seed,layout,palette,shape,density,scale,rotation,noise,W,H})=>({seed,layout,palette,shape,density,scale,rotation,noise,W,H}))(S); }
+
+// ═══════════════ COLOR UTILS ═══════════════
+// Pick from palette with positional clumping — nearby positions get similar colors
+function pickColor(pal,t,seed){
+  var i=Math.floor(((Math.sin(seed*12.9898+78.233)*43758.5453)%1)*3.5);
+  i=Math.max(1,Math.min(pal.length-1,i+(t<0.5?0:2)));
+  return pal[i];
+}
+// Get 2-3 dominant colors from palette
+function dominantColors(pal){
+  return [pal[2],pal[1],pal[3]];
+}
+
+// ═══════════════ DRAWING UTILS ═══════════════
+function drawBackground(p,pal){
+  var ctx=p.drawingContext;
+  var grad=ctx.createRadialGradient(S.W*0.45,S.H*0.45,0,S.W*0.5,S.H*0.5,S.H*0.8);
+  grad.addColorStop(0,pal[1]);grad.addColorStop(0.35,pal[0]);grad.addColorStop(0.7,'#020208');grad.addColorStop(1,'#000004');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
+  var g2=ctx.createRadialGradient(S.W*0.75,S.H*0.2,0,S.W*0.65,S.H*0.35,S.H*0.65);
+  g2.addColorStop(0,pal[2]+'12');g2.addColorStop(1,'transparent');
+  ctx.fillStyle=g2;ctx.fillRect(0,0,S.W,S.H);
+}
+
+function drawGrain(p,rng,amount){
+  amount=amount||0.018;p.loadPixels();
+  var d=p.pixelDensity(),total=4*S.W*S.H*d*d;
+  for(var i=0;i<total;i+=4*Math.floor(2+rng()*4)){
+    var n=(rng()-0.5)*amount*255,grain=rng()>0.93?n*2.5:n;
+    p.pixels[i]=Math.min(255,Math.max(0,p.pixels[i]+grain));
+    p.pixels[i+1]=Math.min(255,Math.max(0,p.pixels[i+1]+grain));
+    p.pixels[i+2]=Math.min(255,Math.max(0,p.pixels[i+2]+grain));
+  }
+  p.updatePixels();
+}
+
+function drawVignette(p){
+  var ctx=p.drawingContext,cx=S.W/2,cy=S.H/2,r=Math.min(S.W,S.H)*0.5;
+  var grad=ctx.createRadialGradient(cx,cy,r*0.45,cx,cy,r*1.2);
+  grad.addColorStop(0,'transparent');grad.addColorStop(0.55,'transparent');grad.addColorStop(0.82,'rgba(0,0,0,0.22)');grad.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,S.W,S.H);
+}
+
+function drawWatermark(p){
+  if(S.tier==='pro')return;
+  var ctx=p.drawingContext,fs=Math.min(S.W*0.04,28);
+  ctx.font=fs+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.12)';ctx.textAlign='center';
+  ctx.fillText('Seed Studio · 种子画室',S.W/2,S.H-fs*0.8);
+  ctx.font=(fs*0.55)+'px "Segoe UI",system-ui,sans-serif';ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillText('seedstudio.top',S.W/2,S.H-fs*0.1);
+}
+
+// Shape drawing with organic perturbation (Hobbs principle: imperfect geometry)
+function drawShapeGlow(p,x,y,size,type,rng,rotVar,col,alpha){
+  alpha=alpha||1;var nj=(rng()-0.5)*size*0.2;
+  p.push();p.translate(x+nj,y+nj);p.rotate(rotVar*p.TWO_PI+(rng()-0.5)*0.3);
+  var ta=['circles','lines','rects','triangles','hexagons','stars','dots'],t=type==='mixed'?ta[Math.floor(rng()*7)]:type;
+  // Subtle outer glow
+  p.noStroke();var gc=p.color(col);gc.setAlpha(alpha*20);p.fill(gc);
+  if(t==='circles'||t==='dots')p.circle(0,0,t==='dots'?size*1.1:size*2.2);
+  else if(t==='rects'){p.rectMode(p.CENTER);p.rect(0,0,size*1.8,size*1.8);}
+  else if(t==='hexagons'||t==='stars')p.circle(0,0,size*2);
+  // Main fill with slight opacity for layering effect
+  var mc=p.color(col);mc.setAlpha(alpha*220);p.fill(mc);
+  if(rng()>0.65){p.noFill();p.stroke(col);p.strokeWeight(0.4+rng()*1.2);}
+  switch(t){
+    case'circles':p.circle(0,0,size);if(rng()>0.45){p.noFill();p.strokeWeight(0.3+rng()*1);p.circle(0,0,size*(0.25+rng()*0.4));}break;
+    case'dots':p.circle(0,0,size*0.4);break;
+    case'lines':p.strokeWeight(0.6+rng()*2.4);var a=rng()*p.TWO_PI,l=size*(0.5+rng()*0.5);p.line(Math.cos(a)*l*0.4,Math.sin(a)*l*0.4,-Math.cos(a)*l*0.4,-Math.sin(a)*l*0.4);if(rng()>0.35){var a2=a+p.HALF_PI;p.line(Math.cos(a2)*l*0.25,Math.sin(a2)*l*0.25,-Math.cos(a2)*l*0.25,-Math.sin(a2)*l*0.25);}break;
+    case'rects':p.rectMode(p.CENTER);var rw=size*(0.4+rng()*0.5),rh=size*(0.4+rng()*0.5);p.rect(0,0,rw,rh);if(rng()>0.4){p.noFill();p.strokeWeight(0.3+rng()*1);p.rect(0,0,rw*0.45,rh*0.45);}break;
+    case'triangles':var pts=[];for(var i=0;i<3;i++){var ang=(i/3)*p.TWO_PI-p.HALF_PI+(rng()-0.5)*0.4,rr=size*(0.3+rng()*0.3);pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});}p.triangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);break;
+    case'hexagons':p.beginShape();for(var i=0;i<6;i++){var ang=(i/6)*p.TWO_PI,r=size*(0.35+rng()*0.25);p.vertex(Math.cos(ang)*r,Math.sin(ang)*r);}p.endShape(p.CLOSE);break;
+    case'stars':p.beginShape();for(var i=0;i<10;i++){var ang=(i/10)*p.TWO_PI-p.HALF_PI,ir=i%2===0?size*(0.3+rng()*0.3):size*(0.1+rng()*0.1);p.vertex(Math.cos(ang)*ir,Math.sin(ang)*ir);}p.endShape(p.CLOSE);break;
+  }
+  p.pop();
+}
+
+// ═══════════════ LAYOUTS ═══════════════
+// 1: VORTEX — spiral with color clumping, large negative space center
+function drawVortex(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var cx=S.W/2,cy=S.H/2,maxR=Math.min(S.W,S.H)*0.48;
+  var arms=Math.floor(p.map(density,5,100,2,6)),pts=Math.floor(p.map(density,5,100,40,200));
+  var doms=dominantColors(pal);
+  for(var arm=0;arm<arms;arm++){
+    var ao=(arm/arms)*p.TWO_PI+rot*(p.PI/180),armCol=doms[arm%doms.length];
+    p.noFill();
+    for(var i=Math.floor(pts*0.15);i<pts;i++){
+      var t=i/pts,r=maxR*(t*0.98+0.02),sa=ao+t*5*p.PI*(0.4+noiseAmt*0.6);
+      var x=cx+Math.cos(sa)*r,y=cy+Math.sin(sa)*r;
+      var es=p.map(r,0,maxR,1.5,10)*scale,al=p.map(t,0,1,0.08,0.7);
+      var col=p.color(armCol);col.setAlpha(al*255);p.stroke(col);p.strokeWeight(p.map(r,0,maxR,0.3,2.2)*scale);
+      if(i%Math.max(1,Math.floor(25/density*8))===0)drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),armCol,al*0.8);
+    }
+  }
+  // Bright center focal point
+  var ctx=p.drawingContext,cg=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.18);
+  cg.addColorStop(0,pal[4]+'25');cg.addColorStop(0.5,pal[2]+'08');cg.addColorStop(1,'transparent');
+  ctx.fillStyle=cg;ctx.fillRect(0,0,S.W,S.H);
+  drawVignette(p);drawGrain(p,rng,0.018);
+}
+
+// 2: GEOMETRIC — bold Swiss-design composition, 50% negative space
+function drawGeometric(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  p.background(pal[0]);
+  var doms=dominantColors(pal),minR=Math.min(S.W,S.H);
+  // One large focal shape cluster on left or right third
+  var side=rng()>0.5,baseX=side?S.W*0.15:S.W*0.8,baseY=S.H*0.45;
+  var nShapes=Math.floor(p.map(density,5,100,3,9));
+  for(var i=0;i<nShapes;i++){
+    var ox=baseX+rng()*minR*0.35-minR*0.18,oy=baseY+rng()*minR*0.4-minR*0.2;
+    var sz=minR*(0.06+rng()*0.16)*scale,cl=doms[Math.floor(rng()*doms.length)];
+    p.fill(cl);p.noStroke();
+    if(rng()>0.6)p.circle(ox,oy,sz);
+    else{p.rectMode(p.CENTER);p.rect(ox,oy,sz*(0.6+rng()*0.8),sz*(0.5+rng()*0.9));}
+    if(rng()>0.5){p.fill(pal[4]);var isz=sz*0.3;p.circle(ox+sz*0.15,oy-sz*0.15,isz);}
+  }
+  // Thin horizontal accent line
+  p.stroke(pal[4]);p.strokeWeight(1+scale);p.line(S.W*0.08,baseY+minR*0.2,S.W*0.6,baseY+minR*0.2);
+  // Small scattered accents
+  for(var i=0;i<Math.floor(density*0.3);i++){
+    var ax=rng()*S.W*0.7+(side?S.W*0.3:0),ay=rng()*S.H*0.7;
+    drawShapeGlow(p,ax,ay,rng()*5*scale+1.5,shape,rng,rot/360*(rng()-0.5),doms[Math.floor(rng()*doms.length)],rng()*0.4+0.2);
+  }
+  drawVignette(p);drawGrain(p,rng,0.012);
+}
+
+// 3: FLOWFIELD — particle flow accumulation (DesLauriers style)
+function drawFlowfield(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nP=Math.floor(p.map(density,5,100,150,1500));
+  var zn=rng()*100,zs=0.003+noiseAmt*0.008;
+  for(var i=0;i<nP;i++){
+    var px=rng()*S.W,py=rng()*S.H,st=rng();
+    var lc=doms[Math.floor(rng()*doms.length)];
+    p.noFill();
+    for(var t=0;t<Math.floor(3+rng()*12);t++){
+      var n=p.noise(px*zs,py*zs,zn)*p.TWO_PI*2;
+      px+=Math.cos(n)*scale*(0.8+rng()*2.5);py+=Math.sin(n)*scale*(0.8+rng()*2.5);
+      if(px<0||px>S.W||py<0||py>S.H)break;
+      var al=0.03+rng()*0.12,col=p.color(lc);col.setAlpha(al*255);
+      p.stroke(col);p.strokeWeight(0.15+rng()*1.2);
+      p.point(px,py);
+    }
+  }
+  drawVignette(p);drawGrain(p,rng,0.015);
+}
+
+// 4: KALEIDOSCOPE — n-fold symmetry with organic variation
+function drawKaleidoscope(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var cx=S.W/2,cy=S.H/2,folds=Math.floor(p.map(density,5,100,5,16));
+  var ne=Math.floor(p.map(density,5,100,6,40)),maxR=Math.min(S.W,S.H)*0.46,sa=p.TWO_PI/folds;
+  var doms=dominantColors(pal);
+  for(var e=0;e<ne;e++){
+    var r=maxR*(0.04+rng()*0.96),ba=rng()*sa;
+    var es=p.map(r,0,maxR,2,16)*scale,ci=Math.floor((r/maxR)*doms.length),col=doms[Math.min(ci,doms.length-1)];
+    for(var f=0;f<folds;f++){
+      var ang=ba+f*sa,jr=noiseAmt*maxR*0.03*(rng()-0.5),ja=noiseAmt*sa*0.25*(rng()-0.5);
+      var x=cx+Math.cos(ang+ja)*(r+jr),y=cy+Math.sin(ang+ja)*(r+jr);
+      drawShapeGlow(p,x,y,es,shape,rng,rot/360*(rng()-0.5),col,0.65);
+    }
+  }
+  p.fill(pal[4]);p.noStroke();p.circle(cx,cy,8*scale);
+  drawVignette(p);drawGrain(p,rng,0.018);
+}
+
+// 5: CELLS — Voronoi biological cell structures
+function drawCells(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nC=Math.floor(p.map(density,5,100,8,35));
+  var sites=[],minR=Math.min(S.W,S.H);
+  for(var i=0;i<nC;i++)sites.push({x:rng()*S.W,y:rng()*S.H,c:doms[Math.floor(rng()*doms.length)]});
+  // Draw cell edges by checking nearest site for each pixel-approximate cell
+  for(var i=0;i<sites.length;i++){
+    var si=sites[i],cellR=0;
+    for(var j=0;j<sites.length;j++){
+      if(i===j)continue;
+      var dx=si.x-sites[j].x,dy=si.y-sites[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(j===0||d<cellR)cellR=d;
+    }
+    cellR*=0.45;
+    if(cellR<3)continue;
+    var al=0.08+rng()*0.2,col=p.color(si.c);col.setAlpha(al*255);p.fill(col);p.noStroke();
+    // Draw organic cell shape
+    p.beginShape();
+    var nv=6+Math.floor(rng()*6);
+    for(var v=0;v<nv;v++){
+      var ang=(v/nv)*p.TWO_PI,rr=cellR*(0.5+rng()*0.5);
+      p.vertex(si.x+Math.cos(ang)*rr,si.y+Math.sin(ang)*rr);
+    }
+    p.endShape(p.CLOSE);
+    if(rng()>0.7)drawShapeGlow(p,si.x,si.y,cellR*0.25*scale,shape,rng,rot/360*(rng()-0.5),si.c,0.4);
+  }
+  drawVignette(p);drawGrain(p,rng,0.016);
+}
+
+// 6: LAYERS — overlapping transparent organic shapes (Hobbs watercolor-style)
+function drawLayers(p,rng,pal,shape,density,scale,rot,noiseAmt){
+  drawBackground(p,pal);
+  var doms=dominantColors(pal),nL=Math.floor(p.map(density,5,100,4,18));
+  var minR=Math.min(S.W,S.H);
+  // Create focal area
+  var fx=S.W*(0.25+rng()*0.5),fy=S.H*(0.25+rng()*0.5);
+  for(var l=0;l<nL;l++){
+    var ox=fx+rng()*minR*0.6-minR*0.3,oy=fy+rng()*minR*0.5-minR*0.25;
+    var sz=minR*(0.04+rng()*0.22)*scale;
+    var cl=doms[Math.floor(rng()*doms.length)],al=0.03+rng()*0.12;
+    p.fill(cl);p.noStroke();
+    // Organic blob via noise-perturbed ellipse
+    p.beginShape();
+    var nv=10+Math.floor(rng()*10);
+    for(var v=0;v<nv;v++){
+      var ang=(v/nv)*p.TWO_PI,nj=noiseAmt*(rng()-0.5)*sz*0.5;
+      var rr=sz*(0.4+rng()*0.6)+nj;
+      p.vertex(ox+Math.cos(ang)*rr,oy+Math.sin(ang)*rr);
+    }
+    p.endShape(p.CLOSE);
+    if(rng()>0.55)drawShapeGlow(p,ox+rng()*sz*0.5-sz*0.25,oy+rng()*sz*0.5-sz*0.25,sz*0.15*scale,shape,rng,rot/360*(rng()-0.5),doms[Math.min(l%doms.length+1,doms.length-1)],0.5);
+  }
+  drawVignette(p);drawGrain(p,rng,0.015);
+}
+
+// ═══════════════ MAIN DRAW ═══════════════
+var p5inst;
+function draw(){
+  if(!p5inst)return; var p=p5inst;
+  p.resizeCanvas(S.W,S.H); p.pixelDensity(1);
+  var rng=mulberry32(S.seed); p.randomSeed(S.seed); p.noiseSeed(S.seed);
+  var pal=PALETTES[S.palette];
+  switch(S.layout){
+    case'vortex':drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'geometric':drawGeometric(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'flowfield':drawFlowfield(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'kaleidoscope':drawKaleidoscope(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'cells':drawCells(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    case'layers':drawLayers(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);break;
+    default:drawVortex(p,rng,pal,S.shape,S.density,S.scale,S.rotation,S.noise);
+  }
+  drawWatermark(p);
+  p.fill(255,255,255,60);p.noStroke();p.textSize(11);p.textAlign(p.RIGHT,p.BOTTOM);
+  p.text('🌱 seed:'+S.seed+' · '+S.layout+' · '+S.palette,S.W-16,S.H-12);
+  updateUI();
+}
+
+// ═══════════════ UI ═══════════════
+function updateUI(){
+  document.getElementById('seedVal').innerHTML='<strong>'+S.seed+'</strong>';
+  document.getElementById('vDensity').textContent=S.density;
+  document.getElementById('vScale').textContent=S.scale.toFixed(2);
+  document.getElementById('vRot').textContent=S.rotation+'°';
+  document.getElementById('vNoise').textContent=S.noise.toFixed(2);
+}
+function syncAll(){
+  document.getElementById('density').value=S.density; document.getElementById('scale').value=S.scale;
+  document.getElementById('rotation').value=S.rotation; document.getElementById('noise').value=S.noise;
+  document.querySelectorAll('#layoutPills button').forEach(function(b){b.classList.toggle('active',b.value===S.layout);});
+  document.querySelectorAll('#shapePills button').forEach(function(b){b.classList.toggle('active',b.value===S.shape);});
+  document.querySelectorAll('#swatches button').forEach(function(b){b.classList.toggle('active',b.dataset.p===S.palette);});
+  document.querySelectorAll('#resPills button').forEach(function(b){b.classList.toggle('active',+b.dataset.w===S.W&&+b.dataset.h===S.H);});
+  updateUI();
+}
+function saveURL(){
+  var p=new URLSearchParams(); p.set('s',S.seed); p.set('l',S.layout); p.set('c',S.palette); p.set('sh',S.shape);
+  p.set('d',S.density); p.set('sc',S.scale); p.set('r',S.rotation); p.set('n',S.noise); p.set('w',S.W); p.set('h',S.H);
+  window.history.replaceState({},'','?'+p.toString());
+}
+function loadURL(){
+  var p=new URLSearchParams(window.location.search); if(!p.has('s'))return;
+  S.seed=+p.get('s')||S.seed; S.layout=p.get('l')||S.layout; S.palette=p.get('c')||S.palette; S.shape=p.get('sh')||S.shape;
+  S.density=+p.get('d')||S.density; S.scale=+p.get('sc')||S.scale; S.rotation=+p.get('r')||S.rotation; S.noise=+p.get('n')||S.noise;
+  S.W=+p.get('w')||S.W; S.H=+p.get('h')||S.H;
+}
+
+// ═══════════════ TOAST ═══════════════
+var tt;
+function toast(m){ var el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){el.classList.remove('show');},2200); }
+
+// ═══════════════ HISTORY ═══════════════
+function pushHistory(){ S.history=[snap()].concat(S.history).slice(0,20); renderHistory(); }
+function undo(){
+  if(S.history.length<2){toast('没有更多历史');return;} S.history.shift(); Object.assign(S,S.history[0]); syncAll();draw();saveURL();renderHistory();
+}
+function renderHistory(){
+  var el=document.getElementById('historyList');
+  if(!S.history.length){el.innerHTML='<div style=\"color:var(--muted);font-size:0.72rem;padding:6px;\">随机生成后出现在这里</div>';return;}
+  el.innerHTML=S.history.slice(0,10).map(function(s,i){return'<div class=\"history-item\" data-idx=\"'+i+'\"><span class=\"seed-num\">#'+String(s.seed).slice(-8)+'</span><span style=\"color:var(--muted)\">'+s.layout+'·'+s.palette+'</span></div>';}).join('');
+  el.querySelectorAll('.history-item').forEach(function(el){el.addEventListener('click',function(){var snap=S.history[+el.dataset.idx];if(snap){Object.assign(S,snap);syncAll();draw();saveURL();}});});
+}
+
+// ═══════════════ PLUGINS ═══════════════
+function randomize(){
+  pushHistory();S.seed=Math.floor(Math.random()*1e9);
+  S.layout=['vortex','geometric','flowfield','kaleidoscope','cells','layers'][Math.floor(Math.random()*6)];
+  S.palette=PAL_KEYS[Math.floor(Math.random()*PAL_KEYS.length)];
+  S.shape=['circles','lines','rects','triangles','mixed'][Math.floor(Math.random()*5)];
+  S.density=Math.floor(Math.random()*80)+10;S.scale=Math.round((Math.random()*2+0.3)*100)/100;S.rotation=Math.floor(Math.random()*360);S.noise=Math.round(Math.random()*100)/100;
+  syncAll();draw();saveURL();toast('🎲 新海报 · 种子 '+S.seed);
+}
+function exportPNG(){
+  if(!p5inst)return;
+
+  function doExport(){
+    var ow=S.W,oh=S.H;
+    if(S.tier==='free'){var longest=Math.max(ow,oh);if(longest>1200){var ratio=1200/longest;S.W=Math.floor(ow*ratio);S.H=Math.floor(oh*ratio);}}
+    var sc=S.tier==='pro'?2:1,fw=S.W,fh=S.H;S.W=fw*sc;S.H=fh*sc;draw();
+    p5inst.save('seedstudio_'+S.seed+'_'+S.layout+'_'+S.palette+(S.tier==='free'?'_free':'')+'.png');
+    S.W=fw;S.H=fh;draw();
+    toast(S.tier==='free'?'📥 已导出(免费版含水印)':'📥 Pro 4K无水印已导出');
+  }
+
+  // Credit check for logged-in users
+  if(window.SS&&window.SS.loggedIn&&S.tier!=='pro'){
+    if(window.SS.cr>0){
+      window.SS.deduct(1,function(err){
+        if(err){toast('❌ '+err);return;}
+        updateAccountUI(); doExport();
+      });
+    } else {
+      if(confirm('积分不足！\n\n前往爱发电充值获取无限导出')){
+        window.open('https://afdian.com/a/seedstudio','_blank');
+      }
+    }
+  } else {
+    doExport();
+  }
+}
+function copyImg(){
+  if(!p5inst)return;p5inst.canvas.elt.toBlob(function(b){navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(function(){toast('📋 已复制到剪贴板');},function(){toast('❌ 失败，请用导出PNG');});});
+}
+function copyLink(){navigator.clipboard.writeText(window.location.href).then(function(){toast('🔗 链接已复制');},function(){toast('⚠️ 复制失败');});}
+function saveSet(){var b=new Blob([JSON.stringify(snap(),null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='seedstudio_settings_'+S.seed+'.json';a.click();toast('💾 设置已保存');}
+function loadSet(file){var r=new FileReader();r.onload=function(e){try{var d=JSON.parse(e.target.result);if(d.seed===undefined)throw 0;pushHistory();Object.assign(S,d);syncAll();draw();saveURL();toast('📂 已加载 · 种子 '+S.seed);}catch(x){toast('❌ 无效设置文件');}};r.readAsText(file);}
+
+// ═══════════════ LICENSE (handled by SS module via CloudBase API) ═══════════════
+function showPayModal(plan){
+  var m=document.getElementById('payModal');
+  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥6/月 · ¥39/年':'¥6/月';
+  document.getElementById('payPrice').dataset.plan=plan;
+  m.classList.add('show');
+}
+function hidePayModal(){document.getElementById('payModal').classList.remove('show');}
+
+// ═══════════════ INIT ═══════════════
+function init(){
+  loadURL();
+
+  var sw=document.getElementById('swatches');
+  PAL_KEYS.forEach(function(k){
+    var pal=PALETTES[k],btn=document.createElement('button');
+    btn.dataset.p=k;btn.title=k;
+    btn.style.background='linear-gradient(135deg, '+pal[0]+' 0%, '+pal[Math.floor(pal.length/2)]+' 50%, '+pal[pal.length-1]+' 100%)';
+    btn.addEventListener('click',function(){S.palette=k;syncAll();draw();saveURL();});
+    sw.appendChild(btn);
+  });
+  syncAll();
+  // Init account via CloudBase API (restores session, sets tier)
+  if(window.SS){SS.init(function(err,u){if(u)updateAccountUI();});}
+
+  // ═══ EVENT LISTENERS ═══
+  document.querySelectorAll('#tabs button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#tabs button').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active');});
+    document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+  });});
+  document.querySelectorAll('#layoutPills button').forEach(function(b){b.addEventListener('click',function(){S.layout=b.value;syncAll();draw();saveURL();});});
+  document.querySelectorAll('#shapePills button').forEach(function(b){b.addEventListener('click',function(){S.shape=b.value;syncAll();draw();saveURL();});});
+
+  var drawTimer=null;
+  function debouncedDraw(){clearTimeout(drawTimer);updateUI();drawTimer=setTimeout(function(){saveURL();draw();},120);}
+  ['density','scale','rotation','noise'].forEach(function(id){
+    var isFloat=id==='scale'||id==='noise',prop=id;
+    document.getElementById(id).addEventListener('input',function(){S[prop]=isFloat?parseFloat(this.value):parseInt(this.value);debouncedDraw();});
+  });
+  document.querySelectorAll('#resPills button').forEach(function(b){b.addEventListener('click',function(){S.W=+b.dataset.w;S.H=+b.dataset.h;syncAll();draw();saveURL();});});
+
+  document.getElementById('btnRandom').addEventListener('click',randomize);
+  document.getElementById('btnUndo').addEventListener('click',undo);
+  document.getElementById('btnExport').addEventListener('click',exportPNG);
+  document.getElementById('btnCopyImg').addEventListener('click',copyImg);
+  document.getElementById('btnCopySeed').addEventListener('click',copyLink);
+  document.getElementById('btnSave').addEventListener('click',saveSet);
+  document.getElementById('btnLoad').addEventListener('click',function(){document.getElementById('fileInput').click();});
+  document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadSet(e.target.files[0]);e.target.value='';});
+  document.getElementById('btnUpgrade').addEventListener('click',function(){window.open('https://afdian.com/a/seedstudio','_blank');});
+  document.getElementById('btnLifetime').addEventListener('click',function(){window.open('https://afdian.com/a/seedstudio','_blank');});
+  document.getElementById('btnCloseModal').addEventListener('click',hidePayModal);
+  document.getElementById('payModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hidePayModal();});
+  document.getElementById('btnGoPay').addEventListener('click',function(){
+    var plan=document.getElementById('payPrice').dataset.plan||'lifetime';
+    window.open('https://afdian.com/a/seedstudio','_blank');
+    toast('💳 请在爱发电完成付款后，回到这里粘贴订单号激活');
+  });
+  // Payment modal: close button
+  document.getElementById('btnGoPay').addEventListener('click',function(){
+    window.open('https://afdian.com/a/seedstudio','_blank');
+    toast('💳 完成付款后，在登录弹窗输入订单号查询 License Key');
+  });
+
+  document.addEventListener('keydown',function(e){
+    if(document.activeElement!==document.body)return;
+    switch(e.key){
+      case'r':if(!e.ctrlKey&&!e.metaKey){e.preventDefault();randomize();}break;
+      case'e':if(!e.ctrlKey&&!e.metaKey){e.preventDefault();exportPNG();}break;
+      case'z':if(e.ctrlKey||e.metaKey){e.preventDefault();undo();}break;
+      case'1':S.layout='vortex';syncAll();draw();saveURL();break;
+      case'2':S.layout='geometric';syncAll();draw();saveURL();break;
+      case'3':S.layout='flowfield';syncAll();draw();saveURL();break;
+      case'4':S.layout='kaleidoscope';syncAll();draw();saveURL();break;
+      case'5':S.layout='cells';syncAll();draw();saveURL();break;
+      case'6':S.layout='layers';syncAll();draw();saveURL();break;
+      case' ':{e.preventDefault();var cw=document.getElementById('canvas-wrap');document.fullscreenElement?document.exitFullscreen():cw.requestFullscreen().catch(function(){});}break;
+    }
+  });
+
+
+  // Account UI
+  function updateAccountUI(){
+    var d=document.getElementById('creditDisplay'),b=document.getElementById('btnAccount'),a=window.SS;
+    if(a&&a.loggedIn){
+      if(a.ti==='pro'){
+        var ed='';if(a.exp){ed=' · 至'+new Date(a.exp).toLocaleDateString('zh-CN');}
+        d.textContent='💰 Pro'+ed;S.tier='pro';syncAll();draw();
+      }else{d.textContent='💰 '+a.cr+' 积分';}
+      b.textContent='👤 已登录';
+    }else{
+      d.textContent='';b.textContent='🌱 创建账号';
+      S.tier='free';
+    }
+  }
+
+  // ═══ LOGIN MODAL ═══
+  function showLoginModal(){
+    document.getElementById("loginModal").classList.add("show");
+    if(SS.loggedIn){showAccountPanel();}
+    else{document.getElementById("loginPanel2").style.display="block";document.getElementById("registerPanel2").style.display="none";document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").classList.add("active");document.getElementById("tabRegisterBtn").classList.remove("active");}
+  }
+  function hideLoginModal(){document.getElementById("loginModal").classList.remove("show");}
+  function showAccountPanel(){
+    document.getElementById("loginPanel2").style.display="none";
+    document.getElementById("registerPanel2").style.display="none";
+    document.getElementById("accountPanel2").style.display="block";
+    document.getElementById("tabLoginBtn").style.display="none";
+    document.getElementById("tabRegisterBtn").style.display="none";
+    document.getElementById("accountEmail").textContent=localStorage.getItem("ss_em")||"";
+    var et='';if(SS.exp){et=' · 到期 '+new Date(SS.exp).toLocaleDateString('zh-CN');}
+    document.getElementById("accountCredits").textContent=(SS.ti==="pro"?"💰 Pro"+et:"💰 "+SS.cr+" 积分");
+  }
+  document.getElementById("loginModal").addEventListener("click",function(e){if(e.target===e.currentTarget)hideLoginModal();});
+
+  var elAL=document.getElementById("btnAccountLogout");if(elAL)elAL.addEventListener("click",function(){SS.logout();hideLoginModal();updateAccountUI();toast("已退出");});
+  var elAC=document.getElementById("btnAccountClose");if(elAC)elAC.addEventListener("click",function(){hideLoginModal();});
+
+  document.getElementById("tabLoginBtn").addEventListener("click",function(){
+    document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").style.display="";document.getElementById("tabRegisterBtn").style.display="";
+    document.getElementById("tabLoginBtn").classList.add("active");document.getElementById("tabRegisterBtn").classList.remove("active");
+  });
+  document.getElementById("tabRegisterBtn").addEventListener("click",function(){
+    document.getElementById("accountPanel2").style.display="none";document.getElementById("tabLoginBtn").style.display="";document.getElementById("tabRegisterBtn").style.display="";
+    document.getElementById("loginPanel2").style.display="none";document.getElementById("registerPanel2").style.display="block";
+    document.getElementById("tabRegisterBtn").classList.add("active");document.getElementById("tabLoginBtn").classList.remove("active");
+  });
+
+  function err(id,m){var e=document.getElementById(id);e.textContent=m;e.style.display="block";}
+
+  document.getElementById("btnLogin").addEventListener("click",function(){
+    var em=document.getElementById("loginEmail").value.trim(),pw=document.getElementById("loginPassword").value;
+    if(!em||!pw){err("loginError","need email+password");return;}
+    SS.login(em,pw,function(e,r){if(e){err("loginError",e);return;}showAccountPanel();updateAccountUI();toast("logged in! "+SS.cr+" credits");});
+  });
+
+  document.getElementById("btnRegister").addEventListener("click",function(){
+    var em=document.getElementById("regEmail").value.trim(),pw=document.getElementById("regPassword").value;
+    if(!em||!pw){err("regError","need email+password");return;}
+    if(pw.length<6){err("regError","password too short");return;}
+    SS.register(em,pw,function(e,r){if(e){err("regError",e);return;}showAccountPanel();updateAccountUI();toast("registered! 3 credits");});
+  });
+
+  document.getElementById("btnActivateLicense").addEventListener("click",function(){
+    var k=document.getElementById("licenseInput").value.trim();if(!k){toast("enter key");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
+  });
+
+  document.getElementById("btnActivatePanel").addEventListener("click",function(){
+    var k=document.getElementById("licenseKeyInput").value.trim();if(!k){toast("enter key");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
+  });
+
+  document.getElementById("btnActivatePay").addEventListener("click",function(){
+    var k=document.getElementById("licenseInputPay").value.trim();if(!k){toast("enter key");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
+  });
+
+  document.getElementById("btnAccount").addEventListener("click",function(){
+    if(SS.loggedIn){
+      if(confirm('确定退出登录？')){SS.logout();updateAccountUI();toast("已退出");}
+    } else showLoginModal();
+  });
+  updateAccountUI();
+
+  // Create p5
+  try{
+    if(typeof p5==='undefined')throw new Error('p5.js not loaded');
+    p5inst=new p5(function(p){p.setup=function(){p.createCanvas(S.W,S.H).parent('canvas-wrap');p.noLoop();};p.draw=function(){};});
+  }catch(e){console.error(e);document.getElementById('canvas-wrap').innerHTML='<div style=\"color:#fff;text-align:center;padding:3rem;\"><h2>Engine load failed</h2><p style=\"color:#888;\">'+e.message+'</p></div>';return;}
+  try{draw();}catch(e){console.error(e);}
+  try{saveURL();}catch(e){console.error(e);}
+}
+document.addEventListener('DOMContentLoaded',init);
+
+</script>
+</body>
+</html>
