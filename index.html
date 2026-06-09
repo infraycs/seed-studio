@@ -873,9 +873,11 @@ function init(){
   function updateAccountUI(){
     var d=document.getElementById('creditDisplay'),b=document.getElementById('btnAccount'),a=window.SS;
     if(a&&a.loggedIn){
-      d.textContent='💰 '+(a.ti==='pro'?'无限':a.cr);
+      if(a.ti==='pro'){
+        var ed='';if(a.exp){ed=' · 至'+new Date(a.exp).toLocaleDateString('zh-CN');}
+        d.textContent='💰 Pro'+ed;S.tier='pro';syncAll();draw();
+      }else{d.textContent='💰 '+a.cr+' 积分';}
       b.textContent='👤 已登录';
-      if(a.ti==='pro'){S.tier='pro';syncAll();draw();}
     }else{
       d.textContent='';b.textContent='🌱 创建账号';
       S.tier='free';
@@ -896,7 +898,8 @@ function init(){
     document.getElementById("tabLoginBtn").style.display="none";
     document.getElementById("tabRegisterBtn").style.display="none";
     document.getElementById("accountEmail").textContent=localStorage.getItem("ss_em")||"";
-    document.getElementById("accountCredits").textContent=SS.ti==="pro"?"💰 Pro 无限":"💰 "+SS.cr+" 积分";
+    var et='';if(SS.exp){et=' · 到期 '+new Date(SS.exp).toLocaleDateString('zh-CN');}
+    document.getElementById("accountCredits").textContent=(SS.ti==="pro"?"💰 Pro"+et:"💰 "+SS.cr+" 积分");
   }
   document.getElementById("loginModal").addEventListener("click",function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
@@ -940,19 +943,19 @@ function init(){
   document.getElementById("btnActivateLicense").addEventListener("click",function(){
     var k=document.getElementById("licenseInput").value.trim();if(!k){toast("enter key");return;}
     if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
-    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
   });
 
   document.getElementById("btnActivatePanel").addEventListener("click",function(){
     var k=document.getElementById("licenseKeyInput").value.trim();if(!k){toast("enter key");return;}
     if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
-    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
   });
 
   document.getElementById("btnActivatePay").addEventListener("click",function(){
     var k=document.getElementById("licenseInputPay").value.trim();if(!k){toast("enter key");return;}
     if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
-    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
+    SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();var em='';if(SS.exp){em=' 至'+new Date(SS.exp).toLocaleDateString('zh-CN');}toast("Pro 已激活"+em);});
   });
 
   document.getElementById("btnAccount").addEventListener("click",function(){

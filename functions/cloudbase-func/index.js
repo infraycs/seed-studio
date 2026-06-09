@@ -3,18 +3,58 @@ var cloudbase,app,db;try{cloudbase=require('@cloudbase/node-sdk');app=cloudbase.
 function ok(d){return{statusCode:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'},body:JSON.stringify(d)};}
 function err(m,s){return{statusCode:s||400,headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({error:m})};}
 
+var MONTHLY_KEY='SEED-PRO-MONTHLY',YEARLY_KEY='SEED-PRO-YEARLY';
+
+function checkExpiry(u){
+  if(u.ti==='pro'&&u.exp&&Date.now()>u.exp){
+    db.collection('users').doc(u._id).update({ti:'free',cr:3,exp:null}).catch(function(){});
+    u.ti='free';u.cr=3;u.exp=null;
+  }
+}
+
 exports.main=async function(e){
   if(e.httpMethod==='OPTIONS')return{statusCode:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'}};
   var b=typeof e.body==='string'?JSON.parse(e.body):e.body||e,a=b.action,d=b.data||{};
   if(!db)return err('db not initialized',500);
   try{
     if(a==='ping')return ok({ok:1});
-    if(a==='reg'){var ex=await db.collection('users').where({email:d.e}).count();if(ex.total)return err('exists');var r=await db.collection('users').add({email:d.e,pw:d.p,cr:3,ti:'free'});return ok({id:r.id,cr:3,ti:'free'});}
-    if(a==='login'){var r=await db.collection('users').where({email:d.e,pw:d.p}).get();if(!r.data.length)return err('invalid');var u=r.data[0];return ok({id:u._id,cr:u.cr,ti:u.ti});}
-    if(a==='deduct'){var r=await db.collection('users').doc(d.id).get();var u=r.data[0];if(u.ti==='pro')return ok({ul:true,rm:u.cr});if(u.cr<d.amt)return err('insufficient');await db.collection('users').doc(d.id).update({cr:u.cr-d.amt});return ok({rm:u.cr-d.amt});}
-    if(a==='upgrade'){var kr=await db.collection('keys').where({key:d.tk}).get();if(!kr.data.length)return err('invalid key');if(kr.data[0].used)return err('key already used');await db.collection('keys').doc(kr.data[0]._id).update({used:true,usedBy:d.id,usedAt:Date.now()});await db.collection('users').doc(d.id).update({ti:'pro',cr:999});return ok({ti:'pro'});}
+    if(a==='reg'){
+      var ex=await db.collection('users').where({email:d.e}).count();
+      if(ex.total)return err('exists');
+      var r=await db.collection('users').add({email:d.e,pw:d.p,cr:3,ti:'free',exp:null});
+      return ok({id:r.id,cr:3,ti:'free',exp:null});
+    }
+    if(a==='login'){
+      var r=await db.collection('users').where({email:d.e,pw:d.p}).get();
+      if(!r.data.length)return err('invalid');
+      var u=r.data[0];checkExpiry(u);
+      return ok({id:u._id,cr:u.cr,ti:u.ti,exp:u.exp||null});
+    }
+    if(a==='deduct'){
+      var r=await db.collection('users').doc(d.id).get();
+      var u=r.data[0];checkExpiry(u);
+      if(u.ti==='pro')return ok({ul:true,rm:u.cr});
+      if(u.cr<d.amt)return err('insufficient');
+      await db.collection('users').doc(d.id).update({cr:u.cr-d.amt});
+      return ok({rm:u.cr-d.amt});
+    }
+    if(a==='upgrade'){
+      var now=Date.now(),exp=null;
+      if(d.tk===MONTHLY_KEY)exp=now+30*86400000;
+      else if(d.tk===YEARLY_KEY)exp=now+365*86400000;
+      else{
+        var kr=await db.collection('keys').where({key:d.tk}).get();
+        if(!kr.data.length)return err('invalid key');
+        if(kr.data[0].used)return err('key already used');
+        await db.collection('keys').doc(kr.data[0]._id).update({used:true,usedBy:d.id,usedAt:now});
+        exp=now+365*86400000;
+      }
+      await db.collection('users').doc(d.id).update({ti:'pro',cr:999,exp:exp});
+      return ok({ti:'pro',exp:exp});
+    }
     if(a==='lookup'){
-      var r=await db.collection('keys').where({oid:d.oid}).get();if(r.data.length)return ok({key:r.data[0].key});
+      var r=await db.collection('keys').where({oid:d.oid}).get();
+      if(r.data.length)return ok({key:r.data[0].key});
       try{
         var ts=Math.floor(Date.now()/1000),uid2='5741d9da011b11efb33152540025c377',tk='WJaK3djBgPCtX8xsYmVeG5kQAn7TDfMN',p=JSON.stringify({page:1,per_page:30});
         var sign=require('crypto').createHash('md5').update(tk+'params'+p+'ts'+ts+'user_id'+uid2).digest('hex');
