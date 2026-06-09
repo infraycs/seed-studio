@@ -1,12 +1,14 @@
 'use strict';
-const cloud = require('@cloudbase/node-sdk');
-const app = cloud.init({env: cloud.SYMBOL_CURRENT_ENV});
-const db = app.database();
+
+// Direct access via tcb admin SDK (always available in cloud functions)
+const tcb = require('tcb-admin-node');
+tcb.init({env: tcb.SYMBOL_CURRENT_ENV});
+const db = tcb.database();
 
 exports.main = async function(e){
   var a=e.action, d=e.data||{};
   try{
-    if(a==='ping') return {ok:1, db:!!db};
+    if(a==='ping') return {ok:1, ts:Date.now()};
     if(a==='reg'){
       var ex=await db.collection('users').where({email:d.e}).count();
       if(ex.total) return {error:'exists'};
