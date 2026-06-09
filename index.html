@@ -472,7 +472,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <div class="modal-overlay" id="payModal">
   <div class="modal">
     <h3>🚀 升级到 Seed Studio Pro</h3>
-    <div class="price" id="payPrice">¥99 永久</div>
+    <div class="price" id="payPrice">¥6/月 · ¥39/年</div>
     <div class="qr-placeholder" id="qrBox" style="background:#111;flex-direction:column;gap:10px;padding:20px;">
       <span style="font-size:1.5rem;">💳</span>
       <span style="font-weight:700;font-size:0.9rem;">爱发电付款</span>
@@ -844,8 +844,8 @@ function init(){
   document.getElementById('btnSave').addEventListener('click',saveSet);
   document.getElementById('btnLoad').addEventListener('click',function(){document.getElementById('fileInput').click();});
   document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])loadSet(e.target.files[0]);e.target.value='';});
-  document.getElementById('btnUpgrade').addEventListener('click',function(){showPayModal('monthly');});
-  document.getElementById('btnLifetime').addEventListener('click',function(){showPayModal('lifetime');});
+  document.getElementById('btnUpgrade').addEventListener('click',function(){window.open('https://afdian.net/@Seed%20Studio','_blank');});
+  document.getElementById('btnLifetime').addEventListener('click',function(){window.open('https://afdian.net/@Seed%20Studio','_blank');});
   document.getElementById('btnCloseModal').addEventListener('click',hidePayModal);
   document.getElementById('payModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hidePayModal();});
   document.getElementById('btnGoPay').addEventListener('click',function(){
