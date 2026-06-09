@@ -797,7 +797,7 @@ function checkStoredLicense(){
 }
 function showPayModal(plan){
   var m=document.getElementById('payModal');
-  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥199 永久':'¥19.99/月';
+  document.getElementById('payPrice').textContent=plan==='lifetime'?'¥6/月 · ¥39/年':'¥6/月';
   document.getElementById('payPrice').dataset.plan=plan;
   m.classList.add('show');
 }
