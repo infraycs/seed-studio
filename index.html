@@ -755,16 +755,15 @@ function exportPNG(){
   }
 
   // Credit check for logged-in users
-  if(window.SS&&window.SS.isLoggedIn&&S.tier!=='pro'){
-    if(window.SS.creditBalance>0){
-      window.SS.deductCredit(1,'export',function(err){
+  if(window.SS&&window.SS.loggedIn&&S.tier!=='pro'){
+    if(window.SS.cr>0){
+      window.SS.deduct(1,function(err){
         if(err){toast('❌ '+err);return;}
         updateAccountUI(); doExport();
       });
     } else {
-      var link=window.SS.getReferralLink();
-      if(confirm('积分不足！\n\n点确定复制邀请链接\n分享给好友双方各得 +2 积分\n\n或前往爱发电充值')){
-        navigator.clipboard.writeText(link); toast('📋 邀请链接已复制！');
+      if(confirm('积分不足！\n\n前往爱发电充值获取无限导出')){
+        window.open('https://afdian.com/a/seedstudio','_blank');
       }
     }
   } else {
@@ -778,23 +777,7 @@ function copyLink(){navigator.clipboard.writeText(window.location.href).then(fun
 function saveSet(){var b=new Blob([JSON.stringify(snap(),null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='seedstudio_settings_'+S.seed+'.json';a.click();toast('💾 设置已保存');}
 function loadSet(file){var r=new FileReader();r.onload=function(e){try{var d=JSON.parse(e.target.result);if(d.seed===undefined)throw 0;pushHistory();Object.assign(S,d);syncAll();draw();saveURL();toast('📂 已加载 · 种子 '+S.seed);}catch(x){toast('❌ 无效设置文件');}};r.readAsText(file);}
 
-// ═══════════════ LICENSE ═══════════════
-var LICENSE_HASHES=['b4e1f1b15d38d345bf3a9a7d9ac6423569a5b3d3ae224d4c30bd86db8ff7588a','c5771d296e101604483b8e441d529d61eb38049b694b3a12cc520766d340b62e','91a98c749d533fd493f8f14da1b18a484f9c56222e9e70dfc3a0c29b1c07ebb0'];
-async function validateLicense(key){
-  var d=new TextEncoder().encode(key.trim().toUpperCase());var h=await crypto.subtle.digest('SHA-256',d);
-  var hex=Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-  return LICENSE_HASHES.includes(hex)?'lifetime':null;
-}
-async function activateLicense(key){
-  var tier=await validateLicense(key);if(!tier){toast('❌ 无效的 License Key');return false;}
-  S.tier='pro';var exp=tier==='lifetime'?'2099-12-31':new Date(Date.now()+365*86400000).toISOString().slice(0,10);
-  localStorage.setItem('seedstudio_license',JSON.stringify({tier:tier,key:key,exp:exp,activated:new Date().toISOString()}));
-  toast('🎉 Pro已激活！有效期至 '+exp);syncAll();draw();saveURL();return true;
-}
-function checkStoredLicense(){
-  try{var d=JSON.parse(localStorage.getItem('seedstudio_license'));if(d&&d.exp&&new Date(d.exp)>new Date()){S.tier='pro';return true;}}catch(e){}
-  return false;
-}
+// ═══════════════ LICENSE (handled by SS module via CloudBase API) ═══════════════
 function showPayModal(plan){
   var m=document.getElementById('payModal');
   document.getElementById('payPrice').textContent=plan==='lifetime'?'¥6/月 · ¥39/年':'¥6/月';
@@ -816,7 +799,8 @@ function init(){
     sw.appendChild(btn);
   });
   syncAll();
-  if(checkStoredLicense()){syncAll();}
+  // Init account via CloudBase API (restores session, sets tier)
+  if(window.SS){SS.init(function(err,u){if(u)updateAccountUI();});}
 
   // ═══ EVENT LISTENERS ═══
   document.querySelectorAll('#tabs button').forEach(function(b){b.addEventListener('click',function(){
