@@ -437,41 +437,26 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
 <!-- ═══════ LOGIN MODAL ═══════ -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal login-modal">
-    <div class="tab-row">
-      <button class="active" data-tab="login">🔐 登录</button>
-      <button data-tab="register">✨ 注册</button>
+    <h3 style="margin-bottom:12px;">🌱 创建账号</h3>
+    <p style="font-size:0.7rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">点击创建 → 复制账号码 → 保存到任何地方<br>换设备时粘贴账号码即可恢复</p>
+    <button type="button" class="submit-btn" id="btnCreateWallet">🎁 创建账号 · 得 3 积分</button>
+    <div id="walletBox" style="display:none;margin-top:12px;padding:12px;background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:var(--radius-sm);">
+      <div style="font-size:0.62rem;color:var(--accent2);margin-bottom:2px;">🔑 你的账号码 · 妥善保存</div>
+      <div id="walletCode" style="font-size:0.6rem;color:var(--text);word-break:break-all;font-family:monospace;margin:6px 0;line-height:1.4;"></div>
+      <button type="button" class="btn btn-outline" id="btnCopyCode" style="font-size:0.6rem;width:100%;">📋 复制账号码</button>
     </div>
-    <div id="loginForm2">
-      <div class="field"><label>邮箱</label><input type="email" id="loginEmail2" placeholder="your@email.com"></div>
-      <div class="field"><label>密码</label><input type="password" id="loginPassword2" placeholder="••••••••"></div>
-      <div class="field" id="loginError2" style="display:none"></div>
-      <button type="button" class="submit-btn" id="btnLogin2">登录</button>
-    </div>
-    <div id="registerForm2" style="display:none;">
-      <div class="field"><label>邮箱</label><input type="email" id="regEmail2" placeholder="your@email.com"></div>
-      <div class="field"><label>密码</label><input type="password" id="regPassword2" placeholder="至少6位"></div>
-      <div class="field"><label>邀请码 <span style="color:var(--muted);">选填</span></label><input type="text" id="regInvite2" placeholder="好友邀请码"></div>
-      <div class="field"><div class="hint">🎁 注册即得 3 免费积分</div></div>
-      <div class="field" id="regError2" style="display:none"></div>
-      <button type="button" class="submit-btn" id="btnRegister2">注册</button>
-      <div id="backupBox" style="display:none;margin-top:12px;padding:12px;background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:var(--radius-sm);">
-        <div style="font-size:0.65rem;color:var(--accent2);margin-bottom:4px;">🔑 备份码 · 换设备恢复用</div>
-        <div id="backupCode" style="font-size:0.6rem;color:var(--text);word-break:break-all;font-family:monospace;margin-bottom:6px;"></div>
-        <button type="button" class="btn btn-outline" id="btnCopyBackup" style="font-size:0.6rem;padding:4px 10px;">📋 复制备份码</button>
-      </div>
-    </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
-      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">已有备份码？恢复账号</div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">
+      <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">已有账号码？恢复</div>
       <div style="display:flex;gap:6px;">
-        <input type="text" id="restoreCode" placeholder="粘贴备份码" style="flex:1;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.65rem;">
-        <button type="button" id="btnRestoreAcc" style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;font-size:0.65rem;">恢复</button>
+        <input type="text" id="restoreCode" placeholder="粘贴账号码" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
+        <button type="button" id="btnRestoreAcc" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">恢复</button>
       </div>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
       <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px;">💳 License Key 激活 Pro</div>
       <div style="display:flex;gap:6px;">
-        <input type="text" id="licenseInput2" placeholder="粘贴 License Key" style="flex:1;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.65rem;">
-        <button type="button" id="btnActivateLicense2" style="padding:6px 10px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.65rem;">激活</button>
+        <input type="text" id="licenseInput2" placeholder="粘贴 License Key" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.7rem;">
+        <button type="button" id="btnActivateLicense2" style="padding:8px 14px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;cursor:pointer;font-size:0.7rem;">激活</button>
       </div>
     </div>
   </div>
@@ -886,85 +871,48 @@ function init(){
   });
 
 
-  // Account system UI
+  // Account UI
   function updateAccountUI(){
-    var disp=document.getElementById('creditDisplay');
-    var btn=document.getElementById('btnAccount');
-    var acc=window.SeedStudioAccount;
-    if(acc){
-      acc.init(function(err,user){
-        if(user){
-          disp.textContent='💰 '+(acc.membershipTier==='pro'||acc.membershipTier==='lifetime'?'无限':acc.creditBalance);
-          btn.textContent='👤 已登录';
-          if(acc.membershipTier==='pro'||acc.membershipTier==='lifetime'){S.tier='pro';syncAll();draw();}
-        }else{
-          disp.textContent=''; btn.textContent='🔐 登录';
-          S.tier='free';
-        }
-      });
+    var d=document.getElementById('creditDisplay'),b=document.getElementById('btnAccount'),a=window.SeedStudioAccount;
+    if(a&&a.isLoggedIn){
+      d.textContent='💰 '+(a.membershipTier==='pro'?'无限':a.creditBalance);
+      b.textContent='👤 已登录';
+      if(a.membershipTier==='pro'){S.tier='pro';syncAll();draw();}
     }else{
-      disp.textContent=''; btn.textContent='🔐 登录';
+      d.textContent='';b.textContent='🌱 创建账号';
+      S.tier='free';
     }
   }
 
-  // ═══ LOGIN MODAL ═══
+  // ═══ LOGIN MODAL (Wallet) ═══
   function showLoginModal(){document.getElementById('loginModal').classList.add('show');}
   function hideLoginModal(){document.getElementById('loginModal').classList.remove('show');}
   document.getElementById('loginModal').addEventListener('click',function(e){if(e.target===e.currentTarget)hideLoginModal();});
 
-  // Tab switch
-  document.querySelectorAll('#loginModal .tab-row button').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      document.querySelectorAll('#loginModal .tab-row button').forEach(function(b){b.classList.toggle('active',b===btn);});
-      document.getElementById('loginForm2').style.display=btn.dataset.tab==='login'?'block':'none';
-      document.getElementById('registerForm2').style.display=btn.dataset.tab==='register'?'block':'none';
+  // Create wallet
+  document.getElementById('btnCreateWallet').addEventListener('click',function(){
+    var a=window.SeedStudioAccount;if(!a){toast('系统加载中');return;}
+    a.createAccount(function(err,r){
+      if(err){toast('❌ '+err);return;}
+      document.getElementById('walletCode').textContent=r.code;
+      document.getElementById('walletBox').style.display='block';
+      updateAccountUI();toast('🎉 账号已创建！积分: '+r.credits);
     });
   });
 
-  // Login
-  document.getElementById('btnLogin2').addEventListener('click',function(){
-    var e=document.getElementById('loginEmail2').value.trim();
-    var p=document.getElementById('loginPassword2').value;
-    if(!e||!p){document.getElementById('loginError2').textContent='请填写邮箱和密码';document.getElementById('loginError2').style.display='block';return;}
-    var a=window.SeedStudioAccount;if(!a){return;}
-    a.login(e,p,function(err,u){
-      if(err){document.getElementById('loginError2').textContent=err;document.getElementById('loginError2').style.display='block';return;}
-      hideLoginModal();updateAccountUI();toast('✅ 登录成功！积分: '+a.creditBalance);
-    });
+  // Copy code
+  document.getElementById('btnCopyCode').addEventListener('click',function(){
+    navigator.clipboard.writeText(document.getElementById('walletCode').textContent).then(function(){toast('📋 已复制！请保存到安全的地方');});
   });
 
-  // Register
-  document.getElementById('btnRegister2').addEventListener('click',function(){
-    var e=document.getElementById('regEmail2').value.trim();
-    var p=document.getElementById('regPassword2').value;
-    var inv=document.getElementById('regInvite2').value.trim();
-    if(!e||!p){document.getElementById('regError2').textContent='请填写邮箱和密码';document.getElementById('regError2').style.display='block';return;}
-    if(p.length<6){document.getElementById('regError2').textContent='密码至少6位';document.getElementById('regError2').style.display='block';return;}
-    var a=window.SeedStudioAccount;if(!a){return;}
-    a.register(e,p,inv,function(err,r){
-      if(err){document.getElementById('regError2').textContent=err;document.getElementById('regError2').style.display='block';return;}
-      // Show backup code
-      document.getElementById('backupCode').textContent=r.backupCode;
-      document.getElementById('backupBox').style.display='block';
-      hideLoginModal();updateAccountUI();
-      toast('🎉 注册成功！请复制备份码');
-    });
-  });
-
-  // Copy backup code
-  document.getElementById('btnCopyBackup').addEventListener('click',function(){
-    var c=document.getElementById('backupCode').textContent;
-    navigator.clipboard.writeText(c).then(function(){toast('📋 备份码已复制！请妥善保存');});
-  });
-
-  // Restore account
+  // Restore from code
   document.getElementById('btnRestoreAcc').addEventListener('click',function(){
     var c=document.getElementById('restoreCode').value.trim();
-    if(!c){toast('请粘贴备份码');return;}
+    if(!c){toast('请粘贴账号码');return;}
     var a=window.SeedStudioAccount;
-    a.restoreAccount(c,function(err,u){
+    a.restoreFromCode(c,function(err,u){
       if(err){toast('❌ '+err);return;}
-      hideLoginModal();updateAccountUI();toast('✅ 账号已恢复！积分: '+a.creditBalance);
+      hideLoginModal();updateAccountUI();toast('✅ 已恢复！积分: '+a.creditBalance);
     });
   });
 
@@ -972,14 +920,13 @@ function init(){
   document.getElementById('btnActivateLicense2').addEventListener('click',function(){
     var k=document.getElementById('licenseInput2').value.trim();
     if(!k){toast('请输入 License Key');return;}
-    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先登录');return;}
+    var a=window.SeedStudioAccount;if(!a||!a.isLoggedIn){toast('请先创建/恢复账号');return;}
     if(k.length>=6){a.activatePro();S.tier='pro';syncAll();draw();updateAccountUI();toast('🎉 Pro 已激活！');}
-    else toast('❌ 无效');
   });
 
   document.getElementById('btnAccount').addEventListener('click',function(){
     var a=window.SeedStudioAccount;
-    if(a&&a.isLoggedIn){a.logout(function(){});document.getElementById('btnAccount').textContent='🔐 登录';document.getElementById('creditDisplay').textContent='';toast('已退出登录');}
+    if(a&&a.isLoggedIn){a.logout(function(){});updateAccountUI();toast('已退出');}
     else showLoginModal();
   });
   updateAccountUI();
