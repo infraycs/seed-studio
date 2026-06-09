@@ -1,49 +1,24 @@
+/**
+ * CloudBase API client. Replace URL after deploy.
+ */
 (function(global){
 'use strict';
-var KEY='ss_w';
-var u=null;
+var API='CLOUDBASE_HTTP_URL'; // User replaces this
+var uid='',cr=0,ti='free';
 
-function load(){try{u=JSON.parse(localStorage.getItem(KEY));return u;}catch(e){u=null;return null;}}
-function save(){if(u)localStorage.setItem(KEY,JSON.stringify(u));}
+function call(action,data){return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,data:data||{}})}).then(function(r){return r.json();});}
 
-function init(cb){load();cb(null,u);}
+function init(cb){var id=localStorage.getItem('ss_id');if(id){uid=id;call('me',{id:uid}).then(function(r){if(r.ok){cr=r.cr;ti=r.ti;cb(null,r);}else{logout();cb(null,null);}}).catch(function(){cb(null,null);});}else cb(null,null);}
 
-// Create = first-time. Login = restore.
-function create(cb){
-  u={id:'SS'+Math.random().toString(36).slice(2,8).toUpperCase(),cr:3,ti:'free',rc:'R'+Math.random().toString(36).slice(2,6).toUpperCase()};
-  save();if(!load())return cb('存储失败',null);
-  cb(null,u);
-}
+function register(email,pw,cb){call('reg',{e:email,p:pw}).then(function(r){if(r.error){cb(r.error,null);return;}uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);cb(null,r);}).catch(function(e){cb(e.message,null);});}
 
-function loginFromCode(code,cb){
-  if(code.length<=12){
-    // Short code - must match localStorage on this device
-    var local=load();
-    if(local&&local.id===code){u=local;cb(null,u);}
-    else cb('未找到账号。换设备请用完整备份码',null);
-  } else {
-    // Full backup code
-    try{var d=JSON.parse(atob(code));u=d;save();cb(null,u);}
-    catch(e){cb('备份码无效',null);}
-  }
-}
+function login(email,pw,cb){call('login',{e:email,p:pw}).then(function(r){if(r.error){cb(r.error,null);return;}uid=r.id;cr=r.cr;ti=r.ti;localStorage.setItem('ss_id',uid);cb(null,r);}).catch(function(e){cb(e.message,null);});}
 
-function getFullCode(){return u?btoa(JSON.stringify(u)):'';}
-function getId(){return u?u.id:'';}
+function logout(){localStorage.removeItem('ss_id');uid='';cr=0;ti='free';}
 
-function logout(){localStorage.removeItem(KEY);u=null;}
-function deduct(amt,cb){
-  if(!u)return cb('请先登录',null);
-  if(u.ti==='pro')return cb(null,{rm:u.cr,ul:true});
-  if((u.cr||0)<(amt||1))return cb('积分不足',null);
-  u.cr-=(amt||1);save();cb(null,{rm:u.cr});
-}
-function activatePro(){if(u){u.ti='pro';u.cr=999;save();}}
+function deduct(amt,cb){call('deduct',{id:uid,amt:amt||1}).then(function(r){if(r.error){cb(r.error,null);return;}if(!r.ul)cr=r.rm;cb(null,r);}).catch(function(e){cb(e.message,null);});}
 
-global.SS={
-  init:init,create:create,login:loginFromCode,logout:logout,deduct:deduct,
-  activatePro:activatePro,getFullCode:getFullCode,getId:getId,
-  get u(){return u;},get cr(){return u?u.cr:0;},get ti(){return u?u.ti:'free';},
-  get loggedIn(){return!!u;},
-};
+function activatePro(key,cb){call('lookup',{oid:key}).then(function(r){if(r.ok){call('upgrade',{id:uid}).then(function(){ti='pro';cr=999;cb(null,{ok:1});});}else{cb('Invalid key',null);}}).catch(function(e){cb(e.message,null);});}
+
+global.SS={init:init,register:register,login:login,logout:logout,deduct:deduct,activatePro:activatePro,get id(){return uid;},get cr(){return cr;},get ti(){return ti;},get loggedIn(){return!!uid;}};
 })(window);
