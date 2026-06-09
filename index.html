@@ -912,25 +912,26 @@ function init(){
 
   document.getElementById("btnActivateLicense").addEventListener("click",function(){
     var k=document.getElementById("licenseInput").value.trim();if(!k){toast("enter key");return;}
-    if(!SS.loggedIn){toast("login first");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
     SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
   });
 
   document.getElementById("btnActivatePanel").addEventListener("click",function(){
     var k=document.getElementById("licenseKeyInput").value.trim();if(!k){toast("enter key");return;}
-    if(!SS.loggedIn){toast("login first");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
     SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
   });
 
   document.getElementById("btnActivatePay").addEventListener("click",function(){
     var k=document.getElementById("licenseInputPay").value.trim();if(!k){toast("enter key");return;}
-    if(!SS.loggedIn){toast("login first");return;}
+    if(!SS.loggedIn){showLoginModal();toast("请先登录");return;}
     SS.activateLicense(k,function(err){if(err){toast(err);return;}S.tier="pro";syncAll();draw();updateAccountUI();toast("Pro activated!");});
   });
 
   document.getElementById("btnAccount").addEventListener("click",function(){
-    if(SS.loggedIn){SS.logout();updateAccountUI();toast("logged out");}
-    else showLoginModal();
+    if(SS.loggedIn){
+      if(confirm('确定退出登录？')){SS.logout();updateAccountUI();toast("已退出");}
+    } else showLoginModal();
   });
   updateAccountUI();
 
